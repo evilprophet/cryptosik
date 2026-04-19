@@ -1,0 +1,482 @@
+@import 'tailwindcss';
+@plugin "daisyui" {
+    themes: false;
+}
+@plugin "daisyui/theme" {
+    name: "default-dark";
+    default: false;
+    prefersdark: false;
+    color-scheme: "dark";
+    --color-base-100: oklch(13% 0.028 261.692);
+    --color-base-200: oklch(21% 0.034 264.665);
+    --color-base-300: oklch(27% 0.033 256.848);
+    --color-base-content: oklch(96% 0.003 264.542);
+    --color-primary: oklch(70% 0.022 261.325);
+    --color-primary-content: oklch(13% 0.028 261.692);
+    --color-secondary: oklch(70% 0.165 254.624);
+    --color-secondary-content: oklch(28% 0.091 267.935);
+    --color-accent: oklch(82% 0.189 84.429);
+    --color-accent-content: oklch(27% 0.077 45.635);
+    --color-neutral: oklch(44% 0.03 256.802);
+    --color-neutral-content: oklch(98% 0.002 247.839);
+    --color-info: oklch(78% 0.154 211.53);
+    --color-info-content: oklch(30% 0.056 229.695);
+    --color-success: oklch(77% 0.152 181.912);
+    --color-success-content: oklch(27% 0.046 192.524);
+    --color-warning: oklch(85% 0.199 91.936);
+    --color-warning-content: oklch(28% 0.066 53.813);
+    --color-error: oklch(70% 0.191 22.216);
+    --color-error-content: oklch(25% 0.092 26.042);
+    --radius-selector: 0rem;
+    --radius-field: 0.25rem;
+    --radius-box: 2rem;
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+    --border: 1px;
+    --depth: 1;
+    --noise: 1;
+}
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer base {
+    :root {
+        color-scheme: dark;
+    }
+
+    body {
+        background-color: var(--color-base-100);
+        background-image: linear-gradient(to bottom, color-mix(in oklab, var(--color-base-100) 55%, transparent), color-mix(in oklab, var(--color-base-200) 35%, transparent)), url('/images/background.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        color: var(--color-base-content);
+        font-family: var(--font-sans);
+    }
+
+    body.app-bg-admin {
+        background-image: linear-gradient(to bottom, color-mix(in oklab, var(--color-base-100) 58%, transparent), color-mix(in oklab, var(--color-base-200) 32%, transparent)), url('/images/background-admin.jpg');
+    }
+
+    ::selection {
+        background: color-mix(in oklab, var(--color-secondary) 35%, transparent);
+    }
+
+    input:not([type='checkbox']):not([type='radio']):not([type='file']),
+    select,
+    textarea {
+        background: var(--color-base-100);
+        border-color: var(--color-base-300);
+        color: var(--color-base-content);
+    }
+
+    input:not([type='checkbox']):not([type='radio']):not([type='file']):focus,
+    select:focus,
+    textarea:focus {
+        outline: 1px solid color-mix(in oklab, var(--color-secondary) 65%, white 0%);
+        border-color: var(--color-secondary);
+    }
+}
+
+@layer components {
+    .markdown-content {
+        color: var(--color-base-content);
+        line-height: 1.7;
+        font-size: 1rem;
+    }
+
+    .markdown-content > * + * {
+        margin-top: 0.9rem;
+    }
+
+    .markdown-content h1,
+    .markdown-content h2,
+    .markdown-content h3,
+    .markdown-content h4,
+    .markdown-content h5,
+    .markdown-content h6 {
+        color: var(--color-base-content);
+        font-weight: 700;
+        line-height: 1.25;
+        margin-top: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .markdown-content h1 {
+        font-size: 2rem;
+    }
+
+    .markdown-content h2 {
+        font-size: 1.5rem;
+    }
+
+    .markdown-content h3 {
+        font-size: 1.25rem;
+    }
+
+    .markdown-content h4 {
+        font-size: 1.125rem;
+    }
+
+    .markdown-content h5 {
+        font-size: 1rem;
+    }
+
+    .markdown-content h6 {
+        font-size: 0.9rem;
+        letter-spacing: 0.03em;
+    }
+
+    .markdown-content p {
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .markdown-content strong {
+        font-weight: 700;
+    }
+
+    .markdown-content em {
+        font-style: italic;
+    }
+
+    .markdown-content del {
+        text-decoration: line-through;
+    }
+
+    .markdown-content ul,
+    .markdown-content ol {
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+        padding-left: 1.6rem;
+    }
+
+    .markdown-content ul {
+        list-style-type: disc;
+    }
+
+    .markdown-content ol {
+        list-style-type: decimal;
+    }
+
+    .markdown-content li + li {
+        margin-top: 0.2rem;
+    }
+
+    .markdown-content li > ul,
+    .markdown-content li > ol {
+        margin-top: 0.35rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .markdown-content a {
+        color: var(--color-secondary);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .markdown-content a:hover {
+        opacity: 0.9;
+    }
+
+    .markdown-content hr {
+        border: 0;
+        border-top: 1px solid var(--color-base-300);
+        margin-top: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .markdown-content blockquote {
+        border-left: 3px solid color-mix(in oklab, var(--color-secondary) 60%, var(--color-base-300) 40%);
+        padding-left: 0.9rem;
+        color: color-mix(in oklab, var(--color-base-content) 80%, var(--color-base-200) 20%);
+    }
+
+    .markdown-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .markdown-content th,
+    .markdown-content td {
+        border: 1px solid var(--color-base-300);
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .markdown-content th {
+        background: color-mix(in oklab, var(--color-base-300) 65%, var(--color-base-200) 35%);
+        font-weight: 700;
+    }
+
+    .markdown-content code {
+        background: color-mix(in oklab, var(--color-base-300) 60%, var(--color-base-200) 40%);
+        border-radius: 0.3rem;
+        padding: 0.08rem 0.3rem;
+        font-size: 0.9em;
+    }
+
+    .markdown-content pre {
+        background: color-mix(in oklab, var(--color-base-300) 70%, var(--color-base-200) 30%);
+        border-radius: 0.65rem;
+        padding: 0.8rem;
+        overflow-x: auto;
+    }
+
+    .markdown-content pre code {
+        background: transparent;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .markdown-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0.6rem;
+        border: 1px solid var(--color-base-300);
+    }
+}
+
+@layer base {
+    button,
+    [role='button'] {
+        cursor: pointer;
+        user-select: text;
+    }
+
+    a[href] {
+        cursor: pointer;
+    }
+}
+
+@layer components {
+    .EasyMDEContainer {
+        border: 1px solid var(--color-base-300);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background: var(--color-base-100);
+    }
+
+    .EasyMDEContainer .editor-toolbar {
+        border: 0;
+        border-bottom: 1px solid var(--color-base-300);
+        background: var(--color-base-200);
+    }
+
+    .EasyMDEContainer .editor-toolbar button {
+        color: var(--color-base-content);
+        border: 0;
+    }
+
+    .EasyMDEContainer .editor-toolbar button:hover,
+    .EasyMDEContainer .editor-toolbar button.active {
+        background: color-mix(in oklab, var(--color-base-300) 75%, var(--color-base-200) 25%);
+    }
+
+    .EasyMDEContainer .CodeMirror {
+        background: var(--color-base-100);
+        color: var(--color-base-content);
+        min-height: 22rem;
+    }
+
+    .EasyMDEContainer .CodeMirror-cursor {
+        border-left-color: var(--color-base-content);
+    }
+
+    .EasyMDEContainer .CodeMirror-selected {
+        background: color-mix(in oklab, var(--color-secondary) 28%, transparent);
+    }
+
+    .EasyMDEContainer .editor-statusbar {
+        color: color-mix(in oklab, var(--color-base-content) 65%, var(--color-base-200) 35%);
+        border-top: 1px solid var(--color-base-300);
+        background: var(--color-base-200);
+    }
+}
+
+@layer components {
+    .EasyMDEContainer .CodeMirror,
+    .EasyMDEContainer .CodeMirror-gutters {
+        background: var(--color-base-100) !important;
+        color: var(--color-base-content) !important;
+    }
+
+    .EasyMDEContainer .CodeMirror-lines,
+    .EasyMDEContainer .CodeMirror pre {
+        color: var(--color-base-content) !important;
+    }
+}
+
+@layer components {
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-toolbar {
+        border: 1px solid var(--color-base-300) !important;
+        border-bottom: 0 !important;
+        border-radius: 0.5rem 0.5rem 0 0;
+        background: var(--color-base-200) !important;
+        padding: 0.45rem 0.55rem;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-toolbar a {
+        border: 1px solid transparent !important;
+        color: var(--color-base-content) !important;
+        border-radius: 0.35rem;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-toolbar a::before {
+        color: var(--color-base-content) !important;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-toolbar a:hover,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-toolbar a.active {
+        background: color-mix(in oklab, var(--color-base-300) 72%, var(--color-base-200) 28%) !important;
+        border-color: var(--color-base-300) !important;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-toolbar i.separator {
+        border-left-color: var(--color-base-300) !important;
+        border-right-color: transparent !important;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .CodeMirror {
+        border: 1px solid var(--color-base-300) !important;
+        border-top: 0 !important;
+        border-radius: 0 0 0.5rem 0.5rem;
+        background: var(--color-base-100) !important;
+        color: var(--color-base-content) !important;
+        min-height: 22rem;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .CodeMirror-gutters {
+        background: var(--color-base-100) !important;
+        border-right: 1px solid var(--color-base-300) !important;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .CodeMirror-lines,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .CodeMirror pre {
+        color: var(--color-base-content) !important;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .CodeMirror-cursor {
+        border-left-color: var(--color-base-content) !important;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .CodeMirror-selected {
+        background: color-mix(in oklab, var(--color-secondary) 26%, transparent) !important;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-statusbar {
+        margin-top: 0.35rem;
+        color: color-mix(in oklab, var(--color-base-content) 65%, var(--color-base-200) 35%) !important;
+    }
+}
+
+@layer components {
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full {
+        background: var(--color-base-100) !important;
+        color: var(--color-base-content) !important;
+        border: 1px solid var(--color-base-300) !important;
+        border-top: 0 !important;
+        border-radius: 0 0 0.5rem 0.5rem;
+        padding: 0.9rem !important;
+        line-height: 1.65;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side {
+        top: 0 !important;
+        right: 0 !important;
+        height: 100% !important;
+        border-radius: 0.5rem !important;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview p,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side p,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full p {
+        margin: 0.65rem 0;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview h1,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview h2,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview h3,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview h4,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview h5,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview h6,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side h1,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side h2,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side h3,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side h4,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side h5,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side h6,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full h1,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full h2,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full h3,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full h4,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full h5,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full h6 {
+        color: var(--color-base-content);
+        font-weight: 700;
+        margin: 1rem 0 0.4rem;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview blockquote,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side blockquote,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full blockquote {
+        border-left: 3px solid color-mix(in oklab, var(--color-secondary) 60%, var(--color-base-300) 40%);
+        color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-base-200) 16%);
+        padding-left: 0.75rem;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview code,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side code,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full code {
+        background: color-mix(in oklab, var(--color-base-300) 60%, var(--color-base-200) 40%);
+        border-radius: 0.3rem;
+        padding: 0.08rem 0.3rem;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview pre,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side pre,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full pre {
+        background: color-mix(in oklab, var(--color-base-300) 70%, var(--color-base-200) 30%);
+        border-radius: 0.65rem;
+        padding: 0.8rem;
+        overflow-x: auto;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview table,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side table,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview th,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview td,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side th,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side td,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full th,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full td {
+        border: 1px solid var(--color-base-300);
+        padding: 0.4rem 0.55rem;
+    }
+
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview a,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-side a,
+    :is(#message-compose-form, #vault-description-form, #create-vault-form) .editor-preview-full a {
+        color: var(--color-secondary);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+}

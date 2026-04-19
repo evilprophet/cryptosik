@@ -1,0 +1,11 @@
+services:
+  app:
+    image: ghcr.io/evilprophet/cryptosik:latest
+    container_name: cryptosik
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/var/www/html/data
+    restart: unless-stopped
