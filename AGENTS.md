@@ -22,12 +22,13 @@ Apply rules in this order (highest to lowest):
 3. Subrepo-local `AGENTS.md` files for the current subtree (if present)
 4. This file (bootstrap/routing only)
 
-## Project Context
-
-- Use `./docs/tech-stack.md` as the source of truth for project tech stack and tooling assumptions.
-
 ## Conflict Resolution
 
 - `./ai-rules/AGENTS.md` is authoritative.
 - Profile files in `./ai-rules/profiles/` extend global rules and are authoritative in their domain.
 - Subrepo-local `AGENTS.md` may narrow behavior for files in that subtree, but must not override higher-priority rules.
+
+## Temporary Copywriting Note
+
+- Login and onboarding copy should use a mysterious but relaxed tone.
+- Source copy may be provided in Polish; translate and keep equivalent tone in EN/DE/ES.

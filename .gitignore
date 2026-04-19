@@ -1,0 +1,59 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+/auth.json
+
+# Dependencies
+/vendor
+/node_modules
+
+# Build artifacts
+/public/build
+/public/hot
+/public/storage
+/bootstrap/cache/*.php
+
+# Storage runtime files
+/storage/*.key
+/storage/pail
+/storage/app/private/*
+!/storage/app/private/.gitkeep
+/storage/app/public/*
+!/storage/app/public/.gitkeep
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitkeep
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitkeep
+/storage/framework/testing/*
+!/storage/framework/testing/.gitkeep
+/storage/framework/views/*
+!/storage/framework/views/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
+
+# Logs
+*.log
+
+# Docker runtime data
+/data/*
+!/data/.gitkeep
+
+# IDE and OS
+/.idea
+/.vscode
+/.fleet
+/.zed
+/.nova
+/.phpunit.cache
+.phpunit.result.cache
+.phpactor.json
+_ide_helper.php
+.DS_Store
+Thumbs.db
+
+# Local tooling
+/.codex
+/ai-rules/
+Homestead.json
+Homestead.yaml
