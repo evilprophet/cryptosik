@@ -150,6 +150,7 @@ Required security variables (must not stay as placeholders):
 Important runtime variables:
 
 - `APP_MODE` (`dev` or `prod`)
+- `TRUSTED_PROXIES` (set when running behind reverse proxy, for example `REMOTE_ADDR`)
 - `CRYPTOSIK_DEV_OTP_CODE`
 - `CRYPTOSIK_ADMIN_PATH`
 - `DB_CONNECTION` (`sqlite` or `mysql`)
