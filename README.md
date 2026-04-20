@@ -85,6 +85,12 @@ docker compose up -d
 
 Open: `http://localhost:8080`
 
+Create the first admin account:
+
+```bash
+docker compose exec app php artisan cryptosik:admin-create '{username}' '{password}'
+```
+
 Notes:
 - Container entrypoint runs migrations automatically.
 - Container cron runs Laravel scheduler every minute.

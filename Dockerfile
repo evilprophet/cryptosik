@@ -13,6 +13,17 @@ RUN composer install \
 
 COPY . .
 
+FROM node:20-alpine AS frontend
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY resources ./resources
+COPY vite.config.js ./
+RUN npm run build
+
 FROM php:8.3-apache
 
 RUN apt-get update \
@@ -31,6 +42,7 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 WORKDIR /var/www/html
 
 COPY --from=vendor /app /var/www/html
+COPY --from=frontend /app/public/build /var/www/html/public/build
 COPY docker/cron/laravel-scheduler /etc/cron.d/laravel-scheduler
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
