@@ -145,10 +145,12 @@ return [
             'list_title' => 'Benutzer',
             'email' => 'E-Mail',
             'nickname' => 'Spitzname',
+            'locale' => 'Sprache',
             'active' => 'Aktiv',
             'inactive' => 'Inaktiv',
             'created' => 'Erstellt',
             'actions' => 'Aktionen',
+            'update_nickname' => 'Bearbeiten',
             'deactivate' => 'Deaktivieren',
             'activate' => 'Aktivieren',
             'status' => [

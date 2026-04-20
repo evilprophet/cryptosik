@@ -26,6 +26,7 @@ class AdminUserController extends Controller
     {
         return view('admin.users', [
             'users' => User::query()->orderBy('id')->paginate(self::PAGE_SIZE),
+            'supportedLocales' => (array) config('cryptosik.locales', ['en']),
         ]);
     }
 
@@ -58,13 +59,15 @@ class AdminUserController extends Controller
     public function updateNickname(UpdateUserNicknameRequest $request, User $user): RedirectResponse
     {
         $validated = $request->validated();
-        $nickname = trim((string) $validated['nickname']);
+        $nickname = trim((string) $validated['edit_nickname']);
+        $locale = (string) $validated['edit_locale'];
 
-        if ($nickname === $user->nickname) {
+        if ($nickname === $user->nickname && $locale === $user->locale) {
             return back()->with('status', __('messages.admin.users.status.nickname_unchanged'));
         }
 
         $user->nickname = $nickname;
+        $user->locale = $locale;
         $user->save();
 
         return back()->with('status', __('messages.admin.users.status.nickname_updated', ['email' => $user->email]));

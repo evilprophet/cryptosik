@@ -158,11 +158,12 @@ return [
             'list_title' => 'Użytkownicy',
             'email' => 'Email',
             'nickname' => 'Nick',
+            'locale' => 'Język',
             'active' => 'Aktywny',
             'inactive' => 'Nieaktywny',
             'created' => 'Utworzono',
             'actions' => 'Akcje',
-            'update_nickname' => 'Zmień nick',
+            'update_nickname' => 'Edytuj',
             'deactivate' => 'Dezaktywuj',
             'activate' => 'Aktywuj',
             'status' => [

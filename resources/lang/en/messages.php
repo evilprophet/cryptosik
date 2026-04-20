@@ -158,11 +158,12 @@ return [
             'list_title' => 'Users',
             'email' => 'Email',
             'nickname' => 'Nickname',
+            'locale' => 'Locale',
             'active' => 'Active',
             'inactive' => 'Inactive',
             'created' => 'Created',
             'actions' => 'Actions',
-            'update_nickname' => 'Update Nickname',
+            'update_nickname' => 'Edit',
             'deactivate' => 'Deactivate',
             'activate' => 'Activate',
             'status' => [
