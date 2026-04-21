@@ -155,6 +155,7 @@ Important runtime variables:
 - `TRUSTED_PROXIES` (set when running behind reverse proxy, for example `REMOTE_ADDR`)
 - `CRYPTOSIK_DEV_OTP_CODE`
 - `CRYPTOSIK_ADMIN_PATH`
+- `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`)
 - `DB_CONNECTION` (`sqlite` or `mysql`)
 - `MAIL_*` (required for OTP and notification delivery in `prod`)
 - `CRYPTOSIK_ATTACHMENTS_PER_ENTRY_LIMIT`
@@ -174,7 +175,7 @@ Important runtime variables:
    - finalizes draft into immutable history.
 5. Admin manages users, vault creation, membership, archive, soft-delete, and restore.
 6. Integrity checks run manually or on schedule and save verification runs.
-7. Weekly unread digest notifications are sent on scheduler run (Monday 09:00).
+7. Weekly unread digest notifications are sent by scheduler based on `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default: Saturday 09:00).
 
 ## 💻 Commands Overview
 

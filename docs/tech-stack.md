@@ -73,7 +73,7 @@ Persistence in container runtime:
 Laravel scheduler definitions (`routes/console.php`):
 - `cryptosik:verify-chains` every 3 hours
 - `cryptosik:otp-prune` hourly
-- `cryptosik:notifications:weekly-unread` weekly on Monday at 09:00
+- `cryptosik:notifications:weekly-unread` by `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`, Saturday 09:00)
 
 Container cron:
 - Runs `php artisan schedule:run` every minute (`docker/cron/laravel-scheduler`)

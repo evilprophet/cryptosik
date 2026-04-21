@@ -71,7 +71,7 @@ Defined in `routes/console.php`:
 
 - `cryptosik:verify-chains` - every 3 hours (`0 */3 * * *`)
 - `cryptosik:otp-prune` - hourly (`0 * * * *`)
-- `cryptosik:notifications:weekly-unread` - weekly on Monday at 09:00 (app timezone)
+- `cryptosik:notifications:weekly-unread` - cron from `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`, Saturday 09:00 app timezone)
 
 ## Framework Utility Endpoints (Not Business API)
 

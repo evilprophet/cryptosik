@@ -170,7 +170,7 @@ As an operator, I want recurring maintenance tasks.
 Acceptance criteria:
 1. Scheduler runs integrity verification every 3 hours.
 2. Scheduler runs OTP prune hourly.
-3. Scheduler runs weekly unread digest on Monday at 09:00.
+3. Scheduler runs weekly unread digest by `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`, Saturday 09:00).
 4. Container cron triggers `php artisan schedule:run` every minute.
 
 ### US-021 - Weekly unread digest email
