@@ -47,6 +47,7 @@ Acceptance criteria:
 2. Entry list is ordered by newest sequence first.
 3. Only finalized entries are shown in history.
 4. Markdown content is rendered safely.
+5. Read status is tracked per `user x entry`.
 
 ### US-006 - Maintain personal draft
 As a member, I want a personal encrypted draft before publishing.
@@ -71,6 +72,7 @@ Acceptance criteria:
 1. Selected entry view includes decrypted title/content.
 2. Selected entry view includes attachment list and file size.
 3. Decryption failures are handled safely in UI.
+4. Opening an entry marks it as read for the current user.
 
 ## Epic C: Attachments
 
@@ -110,7 +112,7 @@ Acceptance criteria:
 As an admin, I want to manage users.
 Acceptance criteria:
 1. Admin can create user with unique email.
-2. Admin can update user nickname.
+2. Admin can update user nickname, locale, and notification preference.
 3. Admin can activate and deactivate users.
 4. User creation is written to audit logs.
 
@@ -121,7 +123,9 @@ Acceptance criteria:
 2. Owner is auto-assigned as vault member with `owner` role.
 3. Admin can assign active users as `member`.
 4. Duplicate assignment is rejected.
-5. Vault creation and member assignment are written to audit logs.
+5. Admin can choose whether to send membership notification now or later.
+6. Admin can manually send membership notification later from vault member list.
+7. Vault creation and member assignment are written to audit logs.
 
 ### US-015 - Vault lifecycle actions
 As an admin, I want to archive, soft-delete, and restore vaults.
@@ -137,7 +141,7 @@ Acceptance criteria:
 2. Logs can be filtered by actor type and action prefix.
 3. Actor labels are resolved to user/admin display values when possible.
 
-## Epic E: Integrity and Operations
+## Epic E: Notifications and Operations
 
 ### US-017 - Verify integrity chain
 As an operator, I want to verify vault integrity.
@@ -166,4 +170,21 @@ As an operator, I want recurring maintenance tasks.
 Acceptance criteria:
 1. Scheduler runs integrity verification every 3 hours.
 2. Scheduler runs OTP prune hourly.
-3. Container cron triggers `php artisan schedule:run` every minute.
+3. Scheduler runs weekly unread digest on Monday at 09:00.
+4. Container cron triggers `php artisan schedule:run` every minute.
+
+### US-021 - Weekly unread digest email
+As a user, I want periodic email summaries about unread entries.
+Acceptance criteria:
+1. One digest email is sent per user (not per vault).
+2. Digest includes only vaults with unread entries.
+3. Digest shows `vault - unread count` summary (no entry content dump).
+4. Digest respects user locale.
+5. Digest send/failure is written to audit logs.
+
+### US-022 - User notification preference
+As a user, I want to enable or disable email notifications.
+Acceptance criteria:
+1. User can toggle notifications in settings modal.
+2. Admin can set notification preference on user create and user edit.
+3. Notification preference is persisted in `users.notifications_enabled` and managed in UI.

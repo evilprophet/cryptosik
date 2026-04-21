@@ -2,7 +2,7 @@
 
 ## Overview
 This ERD reflects the current Laravel implementation for Cryptosik.
-It focuses on append-only entries, encrypted payload storage, vault key lookup, and admin-managed access.
+It focuses on append-only entries, encrypted payload storage, per-user unread tracking, vault key lookup, and admin-managed access.
 
 ## Mermaid
 ```mermaid
@@ -11,6 +11,7 @@ erDiagram
     users ||--o{ vault_members : belongs_to
     users ||--o{ entry_drafts : creates
     users ||--o{ entries : finalizes
+    users ||--o{ entry_reads : reads
 
     admins ||--o{ vault_members : assigns
     admins ||--o{ chain_verification_runs : initiates
@@ -24,12 +25,14 @@ erDiagram
 
     entry_drafts ||--o{ draft_attachments : has_attachments
     entries ||--o{ entry_attachments : has_attachments
+    entries ||--o{ entry_reads : read_markers
 
     users {
         bigint id PK
         string email UK
         string nickname
         string locale
+        boolean notifications_enabled
         boolean is_active
         timestamp created_at
         timestamp updated_at
@@ -75,6 +78,7 @@ erDiagram
         bigint user_id FK
         enum role
         bigint added_by_admin_id FK
+        timestamp membership_notified_at
         timestamp created_at
         timestamp updated_at
     }
@@ -144,6 +148,15 @@ erDiagram
         timestamp updated_at
     }
 
+    entry_reads {
+        bigint id PK
+        bigint entry_id FK
+        bigint user_id FK
+        timestamp read_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
     vault_chain_states {
         uuid vault_id PK,FK
         bigint last_sequence_no
@@ -183,9 +196,11 @@ erDiagram
 - `entry_drafts (vault_id, user_id)` is unique.
 - `entries (vault_id, sequence_no)` is unique.
 - `entries (vault_id, entry_hash)` is unique.
+- `entry_reads (entry_id, user_id)` is unique.
 - `vault_crypto.vault_locator` is unique and used for vault lookup by key.
 
 ## Security Notes
 - Encrypted text fields store ciphertext+nonce as JSON envelopes.
 - Binary file payloads (`blob_enc`) are encrypted and stored as base64 text.
 - Final entry history is integrity-protected by `prev_hash` and `entry_hash`.
+- Notification and digest audit metadata stores only non-sensitive operational values.

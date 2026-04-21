@@ -12,9 +12,9 @@ This document is the source of truth for the Cryptosik technology stack.
 ## 🧱 Core Backend Stack
 
 - `laravel/framework` - HTTP layer, routing, validation, scheduler, ORM
-- Eloquent models for domain entities (`Vault`, `Entry`, `EntryDraft`, `VaultCrypto`, ...)
+- Eloquent models for domain entities (`Vault`, `Entry`, `EntryDraft`, `VaultCrypto`, `EntryRead`, ...)
 - Session-based auth with dedicated user/admin session keys
-- Laravel Mail for OTP delivery
+- Laravel Mail for OTP and notification delivery
 
 ## 🌐 Frontend Stack
 
@@ -34,8 +34,12 @@ Primary tables:
 - `users`, `admins`, `auth_login_codes`
 - `vaults`, `vault_members`, `vault_crypto`
 - `entry_drafts`, `draft_attachments`
-- `entries`, `entry_attachments`
+- `entries`, `entry_attachments`, `entry_reads`
 - `vault_chain_states`, `chain_verification_runs`, `audit_logs`
+
+Notification-related columns:
+- `users.notifications_enabled`
+- `vault_members.membership_notified_at`
 
 Persistence in container runtime:
 - `./data` mounted to `/var/www/html/data`
@@ -54,6 +58,12 @@ Persistence in container runtime:
 - OTP length: 6 digits
 - Dev mode (`APP_MODE=dev`): fixed code (`CRYPTOSIK_DEV_OTP_CODE`)
 - Prod mode (`APP_MODE=prod`): random code sent via SMTP
+- Membership notifications:
+  - immediate send on assign/create when admin selects send-now
+  - manual send-later action from admin vault members list
+- Weekly unread digest:
+  - one email per user
+  - summary per vault (`vault - unread count`)
 - Mailer default:
   - `log` in dev mode
   - `smtp` in prod mode
@@ -63,6 +73,7 @@ Persistence in container runtime:
 Laravel scheduler definitions (`routes/console.php`):
 - `cryptosik:verify-chains` every 3 hours
 - `cryptosik:otp-prune` hourly
+- `cryptosik:notifications:weekly-unread` weekly on Monday at 09:00
 
 Container cron:
 - Runs `php artisan schedule:run` every minute (`docker/cron/laravel-scheduler`)
@@ -88,5 +99,5 @@ Container cron:
 ## 🧪 Test Environment
 
 - Tests use Laravel `testing` environment with SQLite
-- Integration tests cover auth, vault workflow, admin flows, console commands, and localization
-- Unit tests cover audit service, locator derivation, hash generation, and chain verification
+- Integration tests cover auth, vault workflow, admin flows, notifications, console commands, and localization
+- Unit tests cover audit service, locator derivation, hash generation, unread logic, and chain verification

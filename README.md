@@ -18,6 +18,8 @@ For stack details, see [docs/tech-stack.md](docs/tech-stack.md).
 - Per-user encrypted draft workflow with attachment upload and finalization.
 - Admin panel for user and vault management.
 - Scheduled integrity verification and OTP cleanup.
+- Per-user unread tracking and weekly digest email notifications.
+- Admin-controlled membership notifications (send now or send later).
 - Built-in locales: `en`, `pl`, `de`, `es`.
 
 ## 📁 Project Structure
@@ -47,7 +49,7 @@ For stack details, see [docs/tech-stack.md](docs/tech-stack.md).
 - Node.js `20+` and npm (for local frontend assets)
 - SQLite or MySQL (for local development)
 - `ext-sodium` (libsodium)
-- SMTP server for OTP in `APP_MODE=prod`
+- SMTP server for OTP and notification emails in `APP_MODE=prod`
 
 ## 🚀 Quick Start
 
@@ -154,7 +156,7 @@ Important runtime variables:
 - `CRYPTOSIK_DEV_OTP_CODE`
 - `CRYPTOSIK_ADMIN_PATH`
 - `DB_CONNECTION` (`sqlite` or `mysql`)
-- `MAIL_*` (required for OTP delivery in `prod`)
+- `MAIL_*` (required for OTP and notification delivery in `prod`)
 - `CRYPTOSIK_ATTACHMENTS_PER_ENTRY_LIMIT`
 - `CRYPTOSIK_ATTACHMENT_SIZE_LIMIT_BYTES`
 - `CRYPTOSIK_ENTRY_CONTENT_CHARS_LIMIT`
@@ -172,17 +174,19 @@ Important runtime variables:
    - finalizes draft into immutable history.
 5. Admin manages users, vault creation, membership, archive, soft-delete, and restore.
 6. Integrity checks run manually or on schedule and save verification runs.
+7. Weekly unread digest notifications are sent on scheduler run (Monday 09:00).
 
 ## 💻 Commands Overview
 
 ### Custom Artisan commands
 
-| Command                                                       | Description                                             |
-|---------------------------------------------------------------|---------------------------------------------------------|
-| `php artisan cryptosik:admin-create {login} {password?}`      | Create an admin account.                                |
-| `php artisan cryptosik:export-vault {vault_id} {output_path}` | Export encrypted vault data to JSONL.                   |
-| `php artisan cryptosik:verify-chains {--vault=}`              | Verify hash-chain integrity for active/archived vaults. |
-| `php artisan cryptosik:otp-prune {--dry-run}`                 | Delete obsolete OTP records (consumed/expired).         |
+| Command                                                             | Description                                             |
+|---------------------------------------------------------------------|---------------------------------------------------------|
+| `php artisan cryptosik:admin-create {login} {password?}`            | Create an admin account.                                |
+| `php artisan cryptosik:export-vault {vault_id} {output_path}`       | Export encrypted vault data to JSONL.                   |
+| `php artisan cryptosik:verify-chains {--vault=}`                    | Verify hash-chain integrity for active/archived vaults. |
+| `php artisan cryptosik:otp-prune {--dry-run}`                       | Delete obsolete OTP records (consumed/expired).         |
+| `php artisan cryptosik:notifications:weekly-unread {--per-vault=5}` | Send weekly unread digest notifications.                |
 
 ### Common development commands
 
