@@ -13,11 +13,18 @@ use EvilStudio\Cryptosik\Http\Controllers\User\UserSettingsController;
 use EvilStudio\Cryptosik\Http\Controllers\Vault\DraftController;
 use EvilStudio\Cryptosik\Http\Controllers\Vault\VaultController;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 $adminPath = (string) config('cryptosik.admin.path', 'admin');
 
-Route::get('/', [UserAuthController::class, 'showLogin'])->name('home');
+Route::get('/', static function (Request $request): RedirectResponse {
+    if ($request->session()->has(\EvilStudio\Cryptosik\Support\SessionKeys::USER_ID)) {
+        return redirect()->route('vault.workspace');
+    }
+
+    return redirect()->route('auth.user.login.show');
+})->name('home');
 
 Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 
@@ -64,6 +71,7 @@ Route::prefix($adminPath)->group(function (): void {
         Route::get('/vaults', [AdminVaultController::class, 'index'])->name('admin.vaults.index');
         Route::post('/vaults', [AdminVaultController::class, 'store'])->name('admin.vaults.store');
         Route::post('/vaults/{vault}/members', [AdminVaultController::class, 'assignMember'])->name('admin.vaults.members.assign');
+        Route::post('/vaults/{vault}/members/{user}/notify', [AdminVaultController::class, 'notifyMember'])->name('admin.vaults.members.notify');
         Route::post('/vaults/{vault}/archive', [AdminVaultController::class, 'archive'])->name('admin.vaults.archive');
         Route::post('/vaults/{vault}/soft-delete', [AdminVaultController::class, 'softDelete'])->name('admin.vaults.soft-delete');
         Route::post('/vaults/{vaultId}/restore', [AdminVaultController::class, 'restore'])->name('admin.vaults.restore');

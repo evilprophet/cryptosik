@@ -44,6 +44,7 @@ class AdminUserController extends Controller
             'email' => mb_strtolower((string) $validated['email']),
             'nickname' => trim((string) $validated['nickname']),
             'locale' => $defaultLocale,
+            'notifications_enabled' => (bool) ($validated['notifications_enabled'] ?? true),
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
 
@@ -61,13 +62,15 @@ class AdminUserController extends Controller
         $validated = $request->validated();
         $nickname = trim((string) $validated['edit_nickname']);
         $locale = (string) $validated['edit_locale'];
+        $notificationsEnabled = (bool) ($validated['edit_notifications_enabled'] ?? $user->notifications_enabled);
 
-        if ($nickname === $user->nickname && $locale === $user->locale) {
+        if ($nickname === $user->nickname && $locale === $user->locale && $notificationsEnabled === $user->notifications_enabled) {
             return back()->with('status', __('messages.admin.users.status.nickname_unchanged'));
         }
 
         $user->nickname = $nickname;
         $user->locale = $locale;
+        $user->notifications_enabled = $notificationsEnabled;
         $user->save();
 
         return back()->with('status', __('messages.admin.users.status.nickname_updated', ['email' => $user->email]));

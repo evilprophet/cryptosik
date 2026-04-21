@@ -22,6 +22,7 @@ class UpdateUserNicknameRequest extends FormRequest
         return [
             'edit_nickname' => ['required', 'string', 'max:'.$nicknameLimit],
             'edit_locale' => ['required', 'string', Rule::in($supportedLocales)],
+            'edit_notifications_enabled' => ['nullable', 'boolean'],
             'edit_user_id' => ['nullable', 'integer'],
         ];
     }

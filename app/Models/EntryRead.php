@@ -4,43 +4,35 @@ declare(strict_types=1);
 
 namespace EvilStudio\Cryptosik\Models;
 
-use EvilStudio\Cryptosik\Enums\VaultMemberRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class VaultMember extends Model
+class EntryRead extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'vault_id',
+        'entry_id',
         'user_id',
-        'role',
-        'added_by_admin_id',
-        'membership_notified_at',
+        'read_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'role' => VaultMemberRole::class,
-            'membership_notified_at' => 'datetime',
+            'read_at' => 'datetime',
         ];
     }
 
-    public function vault(): BelongsTo
+    public function entry(): BelongsTo
     {
-        return $this->belongsTo(Vault::class);
+        return $this->belongsTo(Entry::class);
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
-
-    public function addedByAdmin(): BelongsTo
-    {
-        return $this->belongsTo(Admin::class, 'added_by_admin_id');
-    }
 }
+

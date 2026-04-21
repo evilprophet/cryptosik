@@ -68,11 +68,29 @@
 
                                     return $leftEmail <=> $rightEmail;
                                 }))
-                                <ul class="space-y-1">
+                                <ul class="space-y-2">
                                     @foreach ($sortedMembers as $member)
-                                        <li>
-                                            {{ $member->user?->email ?? __('messages.admin.vaults.member_unknown') }}
-                                            ({{ $member->role->value }})
+                                        <li class="rounded-md border border-base-300 bg-base-100/40 px-2 py-2">
+                                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-sm">
+                                                        {{ $member->user?->email ?? __('messages.admin.vaults.member_unknown') }}
+                                                        ({{ $member->role->value }})
+                                                    </p>
+                                                    <p class="text-xs text-base-content/65">
+                                                        {{ __('messages.admin.vaults.last_notification') }}:
+                                                        {{ $member->membership_notified_at?->format('Y-m-d H:i') ?? __('messages.admin.vaults.never_notified') }}
+                                                    </p>
+                                                </div>
+                                                @if ($member->user !== null)
+                                                    <form method="post" action="{{ route('admin.vaults.members.notify', ['vault' => $vault, 'user' => $member->user]) }}">
+                                                        @csrf
+                                                        <button type="submit" class="rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-content hover:opacity-90 cursor-pointer select-text">
+                                                            {{ __('messages.admin.vaults.notify_member') }}
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
                                         </li>
                                     @endforeach
                                 </ul>
@@ -151,6 +169,12 @@
                     </select>
                 </label>
 
+                <label class="flex items-center gap-2 rounded-md border border-base-300 bg-base-100/40 px-3 py-2 text-sm">
+                    <input type="hidden" name="send_owner_notification_now" value="0" />
+                    <input type="checkbox" name="send_owner_notification_now" value="1" @checked(old('send_owner_notification_now', '1') === '1') class="h-4 w-4 accent-primary" />
+                    <span>{{ __('messages.admin.vaults.send_owner_notification_now') }}</span>
+                </label>
+
                 <div class="flex items-center justify-center gap-2 pt-2">
                     <button type="button" data-close-modal="create-vault-modal" class="rounded-md border border-base-300 bg-base-300 px-4 py-2 text-sm text-base-content hover:bg-base-300 cursor-pointer select-text">
                         {{ __('messages.user.settings.cancel') }}
@@ -183,6 +207,11 @@
                                 </option>
                             @endforeach
                         </select>
+                    </label>
+                    <label class="flex items-center gap-2 rounded-md border border-base-300 bg-base-100/40 px-3 py-2 text-sm">
+                        <input type="hidden" name="send_notification_now" value="0" />
+                        <input type="checkbox" name="send_notification_now" value="1" checked class="h-4 w-4 accent-primary" />
+                        <span>{{ __('messages.admin.vaults.send_notification_now') }}</span>
                     </label>
 
                     <div class="flex items-center justify-end gap-2 pt-2">
@@ -250,7 +279,7 @@
                 });
             });
 
-            if (@json($errors->has('owner_user_id') || $errors->has('vault_key') || $errors->has('name') || $errors->has('description'))) {
+            if (@json($errors->has('owner_user_id') || $errors->has('vault_key') || $errors->has('name') || $errors->has('description') || $errors->has('send_owner_notification_now'))) {
                 if (createVaultModal && typeof createVaultModal.showModal === 'function') {
                     createVaultModal.showModal();
                     initializeCreateVaultDescriptionEditor();

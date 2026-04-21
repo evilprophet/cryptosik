@@ -67,6 +67,9 @@ class AuditLogServiceTest extends TestCase
         $service->adminUserCreated($admin, $user);
         $service->adminVaultCreated($admin, $vault);
         $service->adminVaultMemberAssigned($admin, $vault, $user);
+        $service->adminVaultMemberNotificationSent($admin, $vault, $user, 'manual');
+        $service->adminVaultMemberNotificationSkipped($admin, $vault, $user);
+        $service->adminVaultMemberNotificationFailed($admin, $vault, $user, 'MailerException');
         $service->vaultOpenSuccess($user, $vault);
         $service->vaultOpenFailed($user);
         $service->vaultLocked($user, $vault);
@@ -75,8 +78,10 @@ class AuditLogServiceTest extends TestCase
         $service->vaultDraftSaved($user, $vault);
         $service->vaultFileUploaded($user, $vault);
         $service->integrityVerificationFailed($vault, 7, 'Hash mismatch');
+        $service->weeklyUnreadDigestSent($user, 2, 5);
+        $service->weeklyUnreadDigestFailed($user, 'MailerException');
 
-        $this->assertDatabaseCount('audit_logs', 17);
+        $this->assertDatabaseCount('audit_logs', 22);
 
         $expectedActions = [
             'user.login.success',
@@ -86,6 +91,9 @@ class AuditLogServiceTest extends TestCase
             'admin.user.created',
             'admin.vault.created',
             'admin.vault.member.assigned',
+            'admin.vault.member.notification.sent',
+            'admin.vault.member.notification.skipped',
+            'admin.vault.member.notification.failed',
             'vault.open.success',
             'vault.open.failed',
             'vault.locked',
@@ -93,6 +101,8 @@ class AuditLogServiceTest extends TestCase
             'vault.draft.saved',
             'vault.file.uploaded',
             'integrity.chain.failed',
+            'system.user.weekly_unread_digest.sent',
+            'system.user.weekly_unread_digest.failed',
         ];
 
         foreach ($expectedActions as $action) {
@@ -118,5 +128,11 @@ class AuditLogServiceTest extends TestCase
         $this->assertSame(0, $integrityFailureLog?->actor_id);
         $this->assertSame(7, $integrityFailureLog?->metadata_json['broken_sequence_no'] ?? null);
         $this->assertSame('Hash mismatch', $integrityFailureLog?->metadata_json['error'] ?? null);
+
+        $notificationSentLog = AuditLog::query()->where('action', 'admin.vault.member.notification.sent')->latest('id')->first();
+
+        $this->assertNotNull($notificationSentLog);
+        $this->assertSame('manual', $notificationSentLog?->metadata_json['mode'] ?? null);
+        $this->assertSame($user->id, $notificationSentLog?->metadata_json['user_id'] ?? null);
     }
 }

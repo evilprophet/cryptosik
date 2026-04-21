@@ -21,6 +21,7 @@ class UserSettingsController extends Controller
         $validated = $request->validate([
             'nickname' => ['required', 'string', 'max:'.$nicknameLimit],
             'locale' => ['required', 'string', Rule::in($supportedLocales)],
+            'notifications_enabled' => ['nullable', 'boolean'],
         ]);
 
         $userId = $request->session()->get(SessionKeys::USER_ID);
@@ -47,9 +48,11 @@ class UserSettingsController extends Controller
 
         $user->nickname = $nickname;
         $user->locale = $locale;
+        $user->notifications_enabled = (bool) ($validated['notifications_enabled'] ?? $user->notifications_enabled);
         $user->save();
 
         $request->session()->put(SessionKeys::USER_NICKNAME, $user->displayName());
+        $request->session()->put(SessionKeys::USER_NOTIFICATIONS_ENABLED, $user->notifications_enabled);
         $request->session()->put('app.locale', $locale);
         app()->setLocale($locale);
 

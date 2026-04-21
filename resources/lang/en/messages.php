@@ -23,7 +23,7 @@ return [
     'auth' => [
         'user_login' => [
             'step1_title' => 'Enter The Vault',
-            'step1_hint' => 'Enter your secret mysterius vault',
+            'step1_hint' => 'Enter your secret mysterious vault',
             'language' => 'Language',
             'email' => 'Email',
             'send_code' => 'Log In',
@@ -32,14 +32,6 @@ return [
             'otp' => 'OTP (6 digits)',
             'verify_continue' => 'Enter Vault',
             'change_email' => 'Use Another Email',
-            'dev_mode_code' => 'Dev mode OTP: :code',
-            'mail' => [
-                'subject' => 'Your Cryptosik login code',
-                'greeting' => 'Hello,',
-                'intro' => 'Use this one-time code to sign in to Cryptosik.',
-                'expiry' => 'The code expires in :minutes minutes.',
-                'ignore' => 'If you did not request this code, you can ignore this email.',
-            ],
             'status' => [
                 'code_issued' => 'If the account exists, a login code has been issued.',
             ],
@@ -51,7 +43,7 @@ return [
         ],
         'vault_unlock' => [
             'title' => 'Unlock Vault',
-            'hint' => 'Enter your mysterius secret to unlock your vault',
+            'hint' => 'Enter your mysterious secret to unlock your vault',
             'vault_key' => 'Vault key',
             'unlock' => 'Unlock Vault',
             'errors' => [
@@ -64,6 +56,7 @@ return [
             'title' => 'Settings',
             'nickname' => 'Nickname',
             'language' => 'Language',
+            'notifications' => 'Email notifications',
             'cancel' => 'Cancel',
             'save' => 'Save',
             'status' => [
@@ -90,6 +83,7 @@ return [
             'attachment' => 'Attachment',
             'entry_attachments' => 'Attachments',
             'no_entry_attachments' => 'No attachments in this entry.',
+            'unread' => 'Unread',
             'selected_entry' => 'Selected Entry',
             'sequence_line' => ':nickname - Date: :entry_date - Finalized: :date',
             'select_entry_hint' => 'Select an entry from the left panel.',
@@ -118,6 +112,7 @@ return [
             'attachment_type_not_allowed' => 'Unsupported attachment type. Allowed formats: txt, md, pdf, odt, ods, odp, doc, docx, xls, xlsx, png, jpg, jpeg, webp.',
             'attachment_not_found' => 'Attachment not found in your draft.',
             'owner_only_description' => 'Only the vault owner can update the description.',
+            'title_required' => 'Vault title is required.',
         ],
     ],
     'admin' => [
@@ -159,7 +154,9 @@ return [
             'email' => 'Email',
             'nickname' => 'Nickname',
             'locale' => 'Locale',
+            'status_notifications' => 'Status and Notifications',
             'active' => 'Active',
+            'notifications' => 'Notifications',
             'inactive' => 'Inactive',
             'created' => 'Created',
             'actions' => 'Actions',
@@ -200,6 +197,11 @@ return [
             'add_member' => 'Add member',
             'select_user' => 'Select user',
             'assign_member' => 'Assign Member',
+            'notify_member' => 'Send Notification',
+            'send_notification_now' => 'Send membership email now',
+            'send_owner_notification_now' => 'Send owner email now',
+            'last_notification' => 'Last notification',
+            'never_notified' => 'never',
             'integrity' => [
                 'not_checked' => 'No checks yet',
                 'checked_at' => 'Last check: :time',
@@ -212,7 +214,12 @@ return [
             ],
             'status' => [
                 'created' => 'Vault created successfully.',
+                'created_with_owner_notification' => 'Vault created and owner notification sent.',
+                'created_owner_notification_skipped' => 'Vault created. Owner notification was skipped.',
                 'member_assigned' => 'Member assigned successfully.',
+                'member_assigned_with_notification' => 'Member assigned and notification sent.',
+                'member_assigned_notification_skipped' => 'Member assigned. Notification was skipped.',
+                'notification_sent' => 'Membership notification sent.',
                 'archived' => 'Vault archived (read-only).',
                 'soft_deleted' => 'Vault soft-deleted. Access and export are blocked.',
                 'restored' => 'Vault restored and active again.',
@@ -223,6 +230,8 @@ return [
                 'already_assigned' => 'User is already assigned to this vault.',
                 'soft_deleted_membership' => 'Cannot modify members of a soft-deleted vault.',
                 'soft_deleted_archive' => 'Soft-deleted vault cannot be archived.',
+                'member_not_found' => 'Member not found in this vault.',
+                'member_notification_failed' => 'Could not send membership notification email.',
                 'not_found' => 'Vault not found.',
             ],
         ],
@@ -238,6 +247,33 @@ return [
             'action' => 'Action',
             'target' => 'Target',
             'empty' => 'No audit logs found.',
+        ],
+    ],
+    'mail' => [
+        'common' => [
+            'greeting' => 'Hello Stranger,',
+        ],
+        'login_otp' => [
+            'subject' => 'Cryptosik - Login Code',
+            'intro' => 'Use this one-time code to sign in to Cryptosik.',
+            'expiry' => 'The code expires in :minutes minutes.',
+            'ignore' => 'If you did not request this code, you can ignore this email.',
+        ],
+        'member_added' => [
+            'subject' => 'Cryptosik - New Vault',
+            'intro' => 'You have beed added to a mystery vault',
+            'vault_id' => 'Vault ID: :vault',
+            'action_text' => 'Open :link and unlock the vault with your mysterious secret',
+        ],
+        'weekly_unread' => [
+            'subject' => 'Cryptosik - Weekly Notification',
+            'intro' => 'You have :count unread entries across your vault access.',
+            'vault_line' => 'Vault :vault - unread: :count',
+            'action_text' => 'Open :link and read missed mysterious entries.',
+        ],
+        'footer' => [
+            'regards' => 'Best regards,',
+            'signature' => 'Mysterious Administrator',
         ],
     ],
 ];

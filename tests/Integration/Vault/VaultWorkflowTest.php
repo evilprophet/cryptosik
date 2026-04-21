@@ -8,6 +8,7 @@ use EvilStudio\Cryptosik\Enums\VaultMemberRole;
 use EvilStudio\Cryptosik\Enums\VaultStatus;
 use EvilStudio\Cryptosik\Models\AuditLog;
 use EvilStudio\Cryptosik\Models\Entry;
+use EvilStudio\Cryptosik\Models\EntryRead;
 use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Models\VaultMember;
@@ -162,6 +163,63 @@ class VaultWorkflowTest extends TestCase
         $entryModeResponse->assertSee('Tryb wpisu');
     }
 
+    public function test_entry_finalize_and_open_marks_entry_as_read_for_author_and_member(): void
+    {
+        $session = $this->unlockedSession();
+
+        $this
+            ->withSession($session)
+            ->from('/vault?mode=new')
+            ->post('/vault/draft/finalize', [
+                'entry_date' => self::ENTRY_DATE,
+                'title' => 'Read marker',
+                'content' => 'Should be marked as read.',
+            ])
+            ->assertStatus(302);
+
+        $entry = Entry::query()->where('vault_id', $this->vault->id)->latest('id')->first();
+
+        $this->assertNotNull($entry);
+        $this->assertDatabaseHas('entry_reads', [
+            'entry_id' => $entry?->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        $member = User::query()->create([
+            'email' => 'reader-member@example.com',
+            'nickname' => 'reader',
+            'locale' => 'en',
+            'is_active' => true,
+        ]);
+
+        VaultMember::query()->create([
+            'vault_id' => $this->vault->id,
+            'user_id' => $member->id,
+            'role' => VaultMemberRole::Member,
+        ]);
+
+        $unlockResult = app(VaultAccessService::class)->unlockVaultForUser($member, $this->vaultKey);
+        $this->assertNotNull($unlockResult);
+
+        $this
+            ->withSession([
+                SessionKeys::USER_ID => $member->id,
+                SessionKeys::USER_EMAIL => $member->email,
+                SessionKeys::USER_NICKNAME => $member->nickname,
+                SessionKeys::UNLOCKED_VAULT_ID => $this->vault->id,
+                SessionKeys::UNLOCKED_VAULT_KEY => $unlockResult['data_key'],
+            ])
+            ->get('/vault?mode=entry&entry='.$entry?->id)
+            ->assertOk();
+
+        $this->assertDatabaseHas('entry_reads', [
+            'entry_id' => $entry?->id,
+            'user_id' => $member->id,
+        ]);
+
+        $this->assertSame(2, EntryRead::query()->where('entry_id', $entry?->id)->count());
+    }
+
     public function test_archived_vault_is_read_only_for_new_drafts(): void
     {
         $this->vault->status = VaultStatus::Archived;
@@ -208,6 +266,7 @@ class VaultWorkflowTest extends TestCase
             ->withSession($this->unlockedSession())
             ->from('/vault')
             ->post('/vault/description', [
+                'title' => 'Updated Family Vault',
                 'description' => 'Updated owner description',
             ]);
 
@@ -219,6 +278,7 @@ class VaultWorkflowTest extends TestCase
             ->get('/vault');
 
         $overviewResponse->assertOk();
+        $overviewResponse->assertSee('Updated Family Vault');
         $overviewResponse->assertSee('Updated owner description');
     }
 

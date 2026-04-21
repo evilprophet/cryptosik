@@ -17,6 +17,7 @@ class AssignVaultMemberRequest extends FormRequest
     {
         return [
             'user_id' => ['required', 'integer', 'exists:users,id'],
+            'send_notification_now' => ['nullable', 'boolean'],
         ];
     }
 }

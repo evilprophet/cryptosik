@@ -137,15 +137,18 @@ class UserSettingsAndLocaleTest extends TestCase
             ->post(route('user.settings.update'), [
                 'nickname' => '  Night Owl  ',
                 'locale' => 'es',
+                'notifications_enabled' => '0',
             ]);
 
         $response->assertRedirect('/vault');
         $response->assertSessionHas('app.locale', 'es');
         $response->assertSessionHas(SessionKeys::USER_NICKNAME, 'Night Owl');
+        $response->assertSessionHas(SessionKeys::USER_NOTIFICATIONS_ENABLED, false);
 
         $user->refresh();
         $this->assertSame('Night Owl', $user->nickname);
         $this->assertSame('es', $user->locale);
+        $this->assertFalse((bool) $user->notifications_enabled);
     }
 
     public function test_user_settings_redirects_to_login_when_session_is_missing_user_id(): void
@@ -201,6 +204,7 @@ class UserSettingsAndLocaleTest extends TestCase
             'email' => $email,
             'nickname' => $nickname,
             'locale' => $locale,
+            'notifications_enabled' => true,
             'is_active' => true,
         ]);
     }

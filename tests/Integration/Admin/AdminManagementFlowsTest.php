@@ -101,6 +101,7 @@ class AdminManagementFlowsTest extends TestCase
                 'email' => 'NEW.MEMBER@EXAMPLE.COM',
                 'nickname' => '  Mystic  ',
                 'is_active' => false,
+                'notifications_enabled' => false,
             ]);
 
         $createResponse->assertRedirect(route('admin.users.index'));
@@ -108,6 +109,7 @@ class AdminManagementFlowsTest extends TestCase
             'email' => 'new.member@example.com',
             'nickname' => 'Mystic',
             'is_active' => false,
+            'notifications_enabled' => false,
         ]);
 
         $createdUser = User::query()->where('email', 'new.member@example.com')->first();
@@ -135,6 +137,7 @@ class AdminManagementFlowsTest extends TestCase
             ->post(route('admin.users.nickname.update', ['user' => $createdUser?->id]), [
                 'edit_nickname' => 'Mystic Prime',
                 'edit_locale' => 'de',
+                'edit_notifications_enabled' => false,
             ]);
 
         $updateNicknameResponse->assertRedirect(route('admin.users.index'));
@@ -142,6 +145,7 @@ class AdminManagementFlowsTest extends TestCase
             'id' => $createdUser?->id,
             'nickname' => 'Mystic Prime',
             'locale' => 'de',
+            'notifications_enabled' => false,
         ]);
 
         $deactivateResponse = $this

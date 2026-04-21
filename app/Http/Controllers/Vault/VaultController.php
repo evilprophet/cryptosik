@@ -13,6 +13,7 @@ use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Services\Audit\AuditLogService;
 use EvilStudio\Cryptosik\Services\Crypto\CryptoService;
+use EvilStudio\Cryptosik\Services\Vault\UnreadEntryService;
 use EvilStudio\Cryptosik\Services\Vault\VaultAccessService;
 use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Contracts\View\View;
@@ -28,6 +29,7 @@ class VaultController extends Controller
         private readonly CryptoService $cryptoService,
         private readonly VaultAccessService $vaultAccessService,
         private readonly AuditLogService $auditLogService,
+        private readonly UnreadEntryService $unreadEntryService,
     ) {
     }
 
@@ -52,6 +54,8 @@ class VaultController extends Controller
         $vaultDescriptionHtml = $vaultDescription !== null ? $this->renderMarkdown($vaultDescription) : null;
 
         $entryItems = [];
+        $readEntryIds = $this->unreadEntryService->getReadEntryIdsForVault($user->id, $vault->id);
+        $readEntryIdMap = array_fill_keys($readEntryIds, true);
 
         $entries = Entry::query()
             ->with('author')
@@ -70,6 +74,7 @@ class VaultController extends Controller
                 'title' => $this->safeDecrypt($entry->title_enc, $dataKey),
                 'author_nickname' => $authorNickname,
                 'attachments_count' => (int) $entry->attachments_count,
+                'is_read' => isset($readEntryIdMap[$entry->id]),
             ];
         }
 
@@ -93,6 +98,7 @@ class VaultController extends Controller
             $selectedEntry = $entries->firstWhere('id', (int) $selectedEntryId);
 
             if ($selectedEntry !== null) {
+                $this->unreadEntryService->markAsRead($user->id, $selectedEntry->id);
                 $selectedEntryTitle = $this->safeDecrypt($selectedEntry->title_enc, $dataKey);
                 $selectedEntryAuthor = trim((string) ($selectedEntry->author?->nickname ?? ''));
 
@@ -113,6 +119,14 @@ class VaultController extends Controller
                             'attachment' => $attachment->id,
                         ]),
                     ];
+                }
+
+                foreach ($entryItems as $index => $item) {
+                    if ($item['id'] === $selectedEntry->id) {
+                        $entryItems[$index]['is_read'] = true;
+
+                        break;
+                    }
                 }
             }
         }
@@ -185,6 +199,17 @@ class VaultController extends Controller
         }
 
         $validated = $request->validated();
+
+        if (array_key_exists('title', $validated)) {
+            $title = trim((string) ($validated['title'] ?? ''));
+
+            if ($title === '') {
+                return back()->withErrors(['title' => __('messages.vault.errors.title_required')]);
+            }
+
+            $vault->name_enc = $this->cryptoService->encryptEnvelope($title, $dataKey);
+        }
+
         $description = trim((string) ($validated['description'] ?? ''));
 
         $vault->description_enc = $description !== ''

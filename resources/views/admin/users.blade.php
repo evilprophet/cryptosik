@@ -14,7 +14,7 @@
                     <th class="px-3 py-2">{{ __('messages.admin.users.email') }}</th>
                     <th class="px-3 py-2">{{ __('messages.admin.users.nickname') }}</th>
                     <th class="px-3 py-2">{{ __('messages.admin.users.locale') }}</th>
-                    <th class="px-3 py-2">{{ __('messages.admin.users.active') }}</th>
+                    <th class="px-3 py-2">{{ __('messages.admin.users.status_notifications') }}</th>
                     <th class="px-3 py-2">{{ __('messages.admin.users.created') }}</th>
                     <th class="px-3 py-2">{{ __('messages.admin.users.actions') }}</th>
                 </tr>
@@ -29,7 +29,12 @@
                         <td class="px-3 py-2">{{ $user->email }}</td>
                         <td class="px-3 py-2">{{ $user->displayName() }}</td>
                         <td class="px-3 py-2">{{ $localeLabel }}</td>
-                        <td class="px-3 py-2">{{ $user->is_active ? __('messages.common.yes') : __('messages.common.no') }}</td>
+                        <td class="px-3 py-2">
+                            <div class="leading-6">
+                                <p>{{ __('messages.admin.users.active') }}: {{ $user->is_active ? __('messages.common.yes') : __('messages.common.no') }}</p>
+                                <p>{{ __('messages.admin.users.notifications') }}: {{ $user->notifications_enabled ? __('messages.common.yes') : __('messages.common.no') }}</p>
+                            </div>
+                        </td>
                         <td class="px-3 py-2">{{ $user->created_at?->format('Y-m-d H:i') }}</td>
                         <td class="px-3 py-2">
                             <div class="flex flex-wrap items-center gap-2">
@@ -64,11 +69,12 @@
     </section>
 
     <dialog id="create-user-modal" class="modal">
-        <div class="modal-box max-w-xl rounded-xl border border-base-300 bg-base-200 text-base-content">
+        <div class="modal-box max-w-lg rounded-xl border border-base-300 bg-base-200 text-base-content">
             <h3 class="mb-4 text-lg font-semibold">{{ __('messages.admin.users.create_user') }}</h3>
 
             <form method="post" action="{{ route('admin.users.store') }}" class="space-y-3">
                 @csrf
+
                 <label class="block text-sm">
                     <span class="mb-1 block font-medium text-base-content/90">{{ __('messages.admin.users.email') }}</span>
                     <input type="email" name="email" required value="{{ old('email') }}" class="w-full rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content" />
@@ -80,8 +86,15 @@
                 </label>
 
                 <label class="flex items-center gap-2 rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content/90">
+                    <input type="hidden" name="is_active" value="0" />
                     <input type="checkbox" name="is_active" value="1" @checked(old('is_active', '1') === '1')>
                     <span>{{ __('messages.admin.users.active') }}</span>
+                </label>
+
+                <label class="flex items-center gap-2 rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content/90">
+                    <input type="hidden" name="notifications_enabled" value="0" />
+                    <input type="checkbox" name="notifications_enabled" value="1" @checked(old('notifications_enabled', '1') === '1')>
+                    <span>{{ __('messages.admin.users.notifications') }}</span>
                 </label>
 
                 <div class="flex items-center justify-center gap-2 pt-2">
@@ -103,7 +116,7 @@
         @php($isCurrentEditUser = (string) old('edit_user_id') === (string) $user->id)
 
         <dialog id="edit-user-{{ $user->id }}" class="modal">
-            <div class="modal-box max-w-xl rounded-xl border border-base-300 bg-base-200 text-base-content">
+            <div class="modal-box max-w-lg rounded-xl border border-base-300 bg-base-200 text-base-content">
                 <h3 class="mb-4 text-lg font-semibold">{{ __('messages.admin.users.update_nickname') }}</h3>
 
                 <form method="post" action="{{ route('admin.users.nickname.update', $user) }}" class="space-y-3">
@@ -116,7 +129,7 @@
                     </label>
 
                     <label class="block text-sm">
-                        <span class="mb-1 block font-medium text-base-content/90">{{ __('messages.user.settings.locale') }}</span>
+                        <span class="mb-1 block font-medium text-base-content/90">{{ __('messages.admin.users.locale') }}</span>
                         <select name="edit_locale" class="w-full rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content">
                             @foreach ($supportedLocales as $locale)
                                 <option value="{{ $locale }}" @selected(($isCurrentEditUser ? old('edit_locale') : $user->locale) === $locale)>
@@ -124,6 +137,12 @@
                                 </option>
                             @endforeach
                         </select>
+                    </label>
+
+                    <label class="flex items-center gap-2 rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content/90">
+                        <input type="hidden" name="edit_notifications_enabled" value="0" />
+                        <input type="checkbox" name="edit_notifications_enabled" value="1" @checked((string) ($isCurrentEditUser ? old('edit_notifications_enabled', $user->notifications_enabled ? '1' : '0') : ($user->notifications_enabled ? '1' : '0')) === '1')>
+                        <span>{{ __('messages.admin.users.notifications') }}</span>
                     </label>
 
                     <div class="flex items-center justify-center gap-2 pt-2">
@@ -169,14 +188,14 @@
                 });
             });
 
-            if (@json($errors->has('email') || $errors->has('nickname') || $errors->has('is_active'))) {
+            if (@json($errors->has('email') || $errors->has('nickname') || $errors->has('is_active') || $errors->has('notifications_enabled'))) {
                 const modal = document.getElementById('create-user-modal');
                 if (modal && typeof modal.showModal === 'function') {
                     modal.showModal();
                 }
             }
 
-            const hasEditErrors = @json($errors->has('edit_nickname') || $errors->has('edit_locale'));
+            const hasEditErrors = @json($errors->has('edit_nickname') || $errors->has('edit_locale') || $errors->has('edit_notifications_enabled'));
             const editUserId = @json(old('edit_user_id'));
 
             if (hasEditErrors && editUserId) {

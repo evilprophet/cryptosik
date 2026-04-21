@@ -15,8 +15,9 @@
 @php($sessionNickname = trim((string) session(\EvilStudio\Cryptosik\Support\SessionKeys::USER_NICKNAME, '')))
 @php($sessionUserEmail = trim((string) session(\EvilStudio\Cryptosik\Support\SessionKeys::USER_EMAIL, '')))
 @php($sessionAdminLogin = trim((string) session(\EvilStudio\Cryptosik\Support\SessionKeys::ADMIN_LOGIN, '')))
+@php($sessionNotificationsEnabled = (string) session(\EvilStudio\Cryptosik\Support\SessionKeys::USER_NOTIFICATIONS_ENABLED, '1'))
 @php($headerIdentity = $showUserControls ? ($sessionNickname !== '' ? $sessionNickname : $sessionUserEmail) : ($showAdminControls ? ($sessionAdminLogin !== '' ? $sessionAdminLogin : 'admin') : ''))
-@php($shouldOpenSettingsModal = ($showUserControls && ($errors->has('nickname') || $errors->has('locale'))) || ($showAdminControls && $errors->has('locale')))
+@php($shouldOpenSettingsModal = ($showUserControls && ($errors->has('nickname') || $errors->has('locale') || $errors->has('notifications_enabled'))) || ($showAdminControls && $errors->has('locale')))
 
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="default-dark">
@@ -153,6 +154,14 @@
                         @endforeach
                     </select>
                 </label>
+                @if ($showUserControls)
+                    <label class="flex items-center gap-2 rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content/90">
+                        <input type="hidden" name="notifications_enabled" value="0" />
+                        <input type="checkbox" name="notifications_enabled" value="1" @checked((string) old('notifications_enabled', $sessionNotificationsEnabled) === '1')>
+                        <span>{{ __('messages.user.settings.notifications') }}</span>
+                    </label>
+                @endif
+
 
                 <div class="flex items-center justify-end gap-2 pt-2">
                     <button type="button" data-close-settings-modal class="rounded-md border border-base-300 bg-base-300 px-4 py-2 text-sm text-base-content hover:bg-base-300 cursor-pointer select-text">{{ __('messages.user.settings.cancel') }}</button>
