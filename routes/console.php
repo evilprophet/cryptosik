@@ -11,4 +11,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('cryptosik:verify-chains')->cron('0 */3 * * *');
 Schedule::command('cryptosik:otp-prune')->hourly();
-Schedule::command('cryptosik:notifications:weekly-unread')->weeklyOn(1, '09:00');
+Schedule::command('cryptosik:notifications:weekly-unread')->cron((string) config('cryptosik.notifications.weekly_unread_cron', '0 9 * * 6'));

@@ -26,6 +26,9 @@ return [
     'integrity' => [
         'verify_every_hours' => (int) env('CRYPTOSIK_CHAIN_VERIFY_EVERY_HOURS', 3),
     ],
+    'notifications' => [
+        'weekly_unread_cron' => (string) env('CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON', '0 9 * * 6'),
+    ],
     'admin' => [
         'path' => trim((string) env('CRYPTOSIK_ADMIN_PATH', 'admin'), " \t\n\r\0\x0B/") ?: 'admin',
     ],
