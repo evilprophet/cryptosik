@@ -23,8 +23,14 @@
                            'block rounded-lg border px-3 py-2 transition cursor-pointer select-text',
                            'border-success bg-success/10' => $selectedEntryId === $item['id'],
                            'border-base-300 hover:bg-base-300' => $selectedEntryId !== $item['id'],
+                           'ring-1 ring-warning/70' => !$item['is_read'],
                        ])>
-                        <p class="text-xs text-base-content/60">{{ $item['entry_date'] }} - {{ $item['author_nickname'] }}</p>
+                        <p class="flex items-center gap-1 text-xs text-base-content/60">
+                            <span>{{ $item['entry_date'] }} - {{ $item['author_nickname'] }}</span>
+                            @if (!$item['is_read'])
+                                <span class="inline-flex rounded bg-warning/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning">{{ __('messages.vault.workspace.unread') }}</span>
+                            @endif
+                        </p>
                         <p class="flex items-center gap-1 text-sm font-medium text-base-content">#{{ $item['sequence_no'] }} {{ $item['title'] }}
                             @if ((int) ($item['attachments_count'] ?? 0) > 0)
                                 <span class="inline-flex items-center text-[10px] font-semibold text-secondary" title="attachments">📎{{ (int) $item['attachments_count'] }}</span>
@@ -230,6 +236,11 @@
                                 <form id="vault-description-form" method="post" action="{{ route('vault.description.update') }}" class="space-y-3">
                                     @csrf
                                     <label class="block text-sm">
+                                        <span class="mb-1 block font-medium text-base-content/90">{{ __('messages.vault.workspace.title') }}</span>
+                                        <input type="text" name="title" value="{{ old('title', $vaultName) }}" maxlength="255" class="w-full rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content" @if($isArchived) disabled @endif />
+                                    </label>
+
+                                    <label class="block text-sm">
                                         <span class="mb-1 block font-medium text-base-content/90">{{ __('messages.vault.workspace.description_markdown') }}</span>
                                         <textarea id="vault-description-field" name="description" rows="10" maxlength="3000" class="w-full rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content" @if($isArchived) disabled @endif>{{ old('description', $vaultDescription ?? '') }}</textarea>
                                     </label>
@@ -299,7 +310,7 @@
                                     }
                                 });
 
-                                if (@json($errors->has('description'))) {
+                                if (@json($errors->has('description') || $errors->has('title'))) {
                                     openModal();
                                 }
 

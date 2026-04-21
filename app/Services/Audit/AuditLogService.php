@@ -98,6 +98,50 @@ class AuditLogService
         );
     }
 
+    public function adminVaultMemberNotificationSent(Admin $admin, Vault $vault, User $user, string $mode): void
+    {
+        $this->write(
+            actorType: 'admin',
+            actorId: $admin->id,
+            action: 'admin.vault.member.notification.sent',
+            targetType: 'vault',
+            targetId: (string) $vault->id,
+            metadata: [
+                'user_id' => $user->id,
+                'mode' => $mode,
+            ],
+        );
+    }
+
+    public function adminVaultMemberNotificationSkipped(Admin $admin, Vault $vault, User $user): void
+    {
+        $this->write(
+            actorType: 'admin',
+            actorId: $admin->id,
+            action: 'admin.vault.member.notification.skipped',
+            targetType: 'vault',
+            targetId: (string) $vault->id,
+            metadata: [
+                'user_id' => $user->id,
+            ],
+        );
+    }
+
+    public function adminVaultMemberNotificationFailed(Admin $admin, Vault $vault, User $user, string $errorCode): void
+    {
+        $this->write(
+            actorType: 'admin',
+            actorId: $admin->id,
+            action: 'admin.vault.member.notification.failed',
+            targetType: 'vault',
+            targetId: (string) $vault->id,
+            metadata: [
+                'user_id' => $user->id,
+                'error_code' => $errorCode,
+            ],
+        );
+    }
+
     public function vaultOpenSuccess(User $user, Vault $vault): void
     {
         $this->write(
@@ -175,6 +219,35 @@ class AuditLogService
             metadata: [
                 'broken_sequence_no' => $brokenSequenceNo,
                 'error' => $error,
+            ],
+        );
+    }
+
+    public function weeklyUnreadDigestSent(User $user, int $vaultCount, int $unreadCount): void
+    {
+        $this->write(
+            actorType: self::SYSTEM_ACTOR_TYPE,
+            actorId: self::SYSTEM_ACTOR_ID,
+            action: 'system.user.weekly_unread_digest.sent',
+            targetType: 'user',
+            targetId: (string) $user->id,
+            metadata: [
+                'vault_count' => $vaultCount,
+                'unread_count' => $unreadCount,
+            ],
+        );
+    }
+
+    public function weeklyUnreadDigestFailed(User $user, string $errorCode): void
+    {
+        $this->write(
+            actorType: self::SYSTEM_ACTOR_TYPE,
+            actorId: self::SYSTEM_ACTOR_ID,
+            action: 'system.user.weekly_unread_digest.failed',
+            targetType: 'user',
+            targetId: (string) $user->id,
+            metadata: [
+                'error_code' => $errorCode,
             ],
         );
     }

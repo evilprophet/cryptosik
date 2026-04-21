@@ -20,6 +20,7 @@ class CreateVaultRequest extends FormRequest
             'vault_key' => ['required', 'string', 'min:8', 'max:512'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:3000'],
+            'send_owner_notification_now' => ['nullable', 'boolean'],
         ];
     }
 }

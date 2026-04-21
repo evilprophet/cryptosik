@@ -14,6 +14,7 @@ use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Models\VaultMember;
 use EvilStudio\Cryptosik\Services\Audit\AuditLogService;
+use EvilStudio\Cryptosik\Services\Vault\MembershipNotificationService;
 use EvilStudio\Cryptosik\Services\Vault\VaultAccessService;
 use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Contracts\View\View;
@@ -28,6 +29,7 @@ class AdminVaultController extends Controller
     public function __construct(
         private readonly VaultAccessService $vaultAccessService,
         private readonly AuditLogService $auditLogService,
+        private readonly MembershipNotificationService $membershipNotificationService,
     ) {
     }
 
@@ -49,6 +51,7 @@ class AdminVaultController extends Controller
     public function store(CreateVaultRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        $sendOwnerNotificationNow = !array_key_exists('send_owner_notification_now', $validated) || (bool) $validated['send_owner_notification_now'];
 
         $owner = User::query()->find((int) $validated['owner_user_id']);
 
@@ -71,6 +74,22 @@ class AdminVaultController extends Controller
 
         if ($admin !== null) {
             $this->auditLogService->adminVaultCreated($admin, $vault);
+
+            if ($sendOwnerNotificationNow) {
+                try {
+                    $this->membershipNotificationService->sendMemberAddedNotification($admin, $vault, $owner, 'immediate_owner_create');
+                } catch (RuntimeException $exception) {
+                    return back()
+                        ->with('status', __('messages.admin.vaults.status.created_owner_notification_skipped'))
+                        ->withErrors(['owner_user_id' => $exception->getMessage()]);
+                }
+
+                return back()->with('status', __('messages.admin.vaults.status.created_with_owner_notification'));
+            }
+
+            $this->membershipNotificationService->skipNotification($admin, $vault, $owner);
+
+            return back()->with('status', __('messages.admin.vaults.status.created_owner_notification_skipped'));
         }
 
         return back()->with('status', __('messages.admin.vaults.status.created'));
@@ -81,6 +100,7 @@ class AdminVaultController extends Controller
         $validated = $request->validated();
         $adminId = $request->session()->get(SessionKeys::ADMIN_ID);
         $userId = (int) $validated['user_id'];
+        $sendNotificationNow = !array_key_exists('send_notification_now', $validated) || (bool) $validated['send_notification_now'];
 
         if ($vault->status === VaultStatus::SoftDeleted) {
             return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.soft_deleted_membership')]);
@@ -114,7 +134,59 @@ class AdminVaultController extends Controller
             $this->auditLogService->adminVaultMemberAssigned($admin, $vault, $user);
         }
 
-        return back()->with('status', __('messages.admin.vaults.status.member_assigned'));
+        if ($admin === null) {
+            return back()->with('status', __('messages.admin.vaults.status.member_assigned'));
+        }
+
+        if ($sendNotificationNow) {
+            try {
+                $this->membershipNotificationService->sendMemberAddedNotification($admin, $vault, $user, 'immediate');
+            } catch (RuntimeException $exception) {
+                return back()
+                    ->with('status', __('messages.admin.vaults.status.member_assigned_notification_skipped'))
+                    ->withErrors(['user_id' => $exception->getMessage()]);
+            }
+
+            return back()->with('status', __('messages.admin.vaults.status.member_assigned_with_notification'));
+        }
+
+        $this->membershipNotificationService->skipNotification($admin, $vault, $user);
+
+        return back()->with('status', __('messages.admin.vaults.status.member_assigned_notification_skipped'));
+    }
+
+    public function notifyMember(Request $request, Vault $vault, User $user): RedirectResponse
+    {
+        if ($vault->status === VaultStatus::SoftDeleted) {
+            return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.soft_deleted_membership')]);
+        }
+
+        if (!$user->is_active) {
+            return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.member_must_be_active')]);
+        }
+
+        $membershipExists = VaultMember::query()
+            ->where('vault_id', $vault->id)
+            ->where('user_id', $user->id)
+            ->exists();
+
+        if (!$membershipExists) {
+            return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.member_not_found')]);
+        }
+
+        $admin = $this->resolveAdmin($request->session()->get(SessionKeys::ADMIN_ID));
+
+        if ($admin === null) {
+            return redirect()->route('admin.login.show');
+        }
+
+        try {
+            $this->membershipNotificationService->sendMemberAddedNotification($admin, $vault, $user, 'manual');
+        } catch (RuntimeException $exception) {
+            return back()->withErrors(['user_id' => $exception->getMessage()]);
+        }
+
+        return back()->with('status', __('messages.admin.vaults.status.notification_sent'));
     }
 
     public function archive(Vault $vault): RedirectResponse

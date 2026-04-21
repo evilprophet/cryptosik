@@ -7,6 +7,7 @@ namespace EvilStudio\Cryptosik\Models;
 use EvilStudio\Cryptosik\Enums\EntryContentFormat;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -51,5 +52,17 @@ class Entry extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(EntryAttachment::class);
+    }
+
+    public function reads(): HasMany
+    {
+        return $this->hasMany(EntryRead::class);
+    }
+
+    public function readByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'entry_reads')
+            ->withPivot('read_at')
+            ->withTimestamps();
     }
 }

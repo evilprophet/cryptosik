@@ -22,6 +22,7 @@ class CreateUserRequest extends FormRequest
             'email' => ['required', 'email:rfc', Rule::unique('users', 'email')],
             'nickname' => ['required', 'string', 'max:'.$nicknameLimit],
             'is_active' => ['nullable', 'boolean'],
+            'notifications_enabled' => ['nullable', 'boolean'],
         ];
     }
 }

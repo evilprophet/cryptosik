@@ -101,6 +101,7 @@ class AdminManagementFlowsTest extends TestCase
                 'email' => 'NEW.MEMBER@EXAMPLE.COM',
                 'nickname' => '  Mystic  ',
                 'is_active' => false,
+                'notifications_enabled' => false,
             ]);
 
         $createResponse->assertRedirect(route('admin.users.index'));
@@ -108,6 +109,7 @@ class AdminManagementFlowsTest extends TestCase
             'email' => 'new.member@example.com',
             'nickname' => 'Mystic',
             'is_active' => false,
+            'notifications_enabled' => false,
         ]);
 
         $createdUser = User::query()->where('email', 'new.member@example.com')->first();
@@ -123,7 +125,8 @@ class AdminManagementFlowsTest extends TestCase
             ->withSession($this->adminSession($admin))
             ->from(route('admin.users.index'))
             ->post(route('admin.users.nickname.update', ['user' => $createdUser?->id]), [
-                'nickname' => 'Mystic',
+                'edit_nickname' => 'Mystic',
+                'edit_locale' => 'en',
             ]);
 
         $sameNicknameResponse->assertRedirect(route('admin.users.index'));
@@ -132,13 +135,17 @@ class AdminManagementFlowsTest extends TestCase
             ->withSession($this->adminSession($admin))
             ->from(route('admin.users.index'))
             ->post(route('admin.users.nickname.update', ['user' => $createdUser?->id]), [
-                'nickname' => 'Mystic Prime',
+                'edit_nickname' => 'Mystic Prime',
+                'edit_locale' => 'de',
+                'edit_notifications_enabled' => false,
             ]);
 
         $updateNicknameResponse->assertRedirect(route('admin.users.index'));
         $this->assertDatabaseHas('users', [
             'id' => $createdUser?->id,
             'nickname' => 'Mystic Prime',
+            'locale' => 'de',
+            'notifications_enabled' => false,
         ]);
 
         $deactivateResponse = $this
@@ -193,11 +200,12 @@ class AdminManagementFlowsTest extends TestCase
             ->withSession($this->adminSession($admin))
             ->from(route('admin.users.index'))
             ->post(route('admin.users.nickname.update', ['user' => $createdUser?->id]), [
-                'nickname' => str_repeat('a', ((int) config('cryptosik.limits.user_nickname_chars')) + 1),
+                'edit_nickname' => str_repeat('a', ((int) config('cryptosik.limits.user_nickname_chars')) + 1),
+                'edit_locale' => 'en',
             ]);
 
         $nicknameTooLongResponse->assertRedirect(route('admin.users.index'));
-        $nicknameTooLongResponse->assertSessionHasErrors('nickname');
+        $nicknameTooLongResponse->assertSessionHasErrors('edit_nickname');
     }
 
     public function test_admin_vault_management_actions_and_validations(): void

@@ -90,6 +90,7 @@ class UserAuthController extends Controller
         $request->session()->put(SessionKeys::USER_ID, $user->id);
         $request->session()->put(SessionKeys::USER_EMAIL, $user->email);
         $request->session()->put(SessionKeys::USER_NICKNAME, $user->displayName());
+        $request->session()->put(SessionKeys::USER_NOTIFICATIONS_ENABLED, $user->notifications_enabled);
         $request->session()->put('app.locale', $locale);
         $request->session()->forget(['auth.pending_email', 'dev_code']);
 
@@ -137,6 +138,7 @@ class UserAuthController extends Controller
             SessionKeys::USER_ID,
             SessionKeys::USER_EMAIL,
             SessionKeys::USER_NICKNAME,
+            SessionKeys::USER_NOTIFICATIONS_ENABLED,
             SessionKeys::UNLOCKED_VAULT_ID,
             SessionKeys::UNLOCKED_VAULT_KEY,
             'auth.pending_email',

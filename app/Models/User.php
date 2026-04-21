@@ -19,12 +19,14 @@ class User extends Authenticatable
         'email',
         'nickname',
         'locale',
+        'notifications_enabled',
         'is_active',
     ];
 
     protected function casts(): array
     {
         return [
+            'notifications_enabled' => 'boolean',
             'is_active' => 'boolean',
         ];
     }
@@ -54,6 +56,18 @@ class User extends Authenticatable
     public function entries(): HasMany
     {
         return $this->hasMany(Entry::class, 'created_by');
+    }
+
+    public function entryReads(): HasMany
+    {
+        return $this->hasMany(EntryRead::class);
+    }
+
+    public function readEntries(): BelongsToMany
+    {
+        return $this->belongsToMany(Entry::class, 'entry_reads')
+            ->withPivot('read_at')
+            ->withTimestamps();
     }
 
     public function displayName(): string

@@ -11,6 +11,7 @@ use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Services\Audit\AuditLogService;
 use EvilStudio\Cryptosik\Services\Vault\EntryService;
+use EvilStudio\Cryptosik\Services\Vault\UnreadEntryService;
 use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class DraftController extends Controller
     public function __construct(
         private readonly EntryService $entryService,
         private readonly AuditLogService $auditLogService,
+        private readonly UnreadEntryService $unreadEntryService,
     ) {
     }
 
@@ -102,6 +104,7 @@ class DraftController extends Controller
 
             $entry = $this->entryService->finalizeDraft($user, $vault);
             $this->auditLogService->vaultEntryAdded($user, $entry);
+            $this->unreadEntryService->markAsRead($user->id, $entry->id);
         } catch (RuntimeException $exception) {
             return $this->redirectToComposer()->withErrors(['draft' => $exception->getMessage()]);
         }
