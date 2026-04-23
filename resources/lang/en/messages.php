@@ -32,6 +32,7 @@ return [
             'otp' => 'OTP (6 digits)',
             'verify_continue' => 'Enter Vault',
             'change_email' => 'Use Another Email',
+            'dev_mode_code' => 'Dev mode OTP: :code',
             'status' => [
                 'code_issued' => 'If the account exists, a login code has been issued.',
             ],
@@ -78,6 +79,9 @@ return [
             'title' => 'Title',
             'content_markdown' => 'Content (Markdown)',
             'description_markdown' => 'Description (Markdown)',
+            'view_rendered' => 'Rendered',
+            'view_raw' => 'Raw Markdown',
+            'emoji_picker' => 'Insert emoji',
             'attachments' => 'Draft Attachments',
             'no_attachments' => 'No attachments in current draft.',
             'attachment' => 'Attachment',

@@ -32,6 +32,7 @@ return [
             'otp' => 'OTP (6 Ziffern)',
             'verify_continue' => 'Tresor Oeffnen',
             'change_email' => 'Andere E-Mail',
+            'dev_mode_code' => 'OTP im Dev-Modus: :code',
             'status' => [
                 'code_issued' => 'Falls das Konto existiert, wurde ein Login-Code erstellt.',
             ],
@@ -78,6 +79,9 @@ return [
             'title' => 'Titel',
             'content_markdown' => 'Inhalt (Markdown)',
             'description_markdown' => 'Beschreibung (Markdown)',
+            'view_rendered' => 'Gerendert',
+            'view_raw' => 'Rohes Markdown',
+            'emoji_picker' => 'Emoji einfügen',
             'attachments' => 'Entwurf-Anhänge',
             'no_attachments' => 'Keine Anhänge im aktuellen Entwurf.',
             'attachment' => 'Anhang',

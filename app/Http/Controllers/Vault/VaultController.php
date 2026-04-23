@@ -91,6 +91,7 @@ class VaultController extends Controller
         $selectedEntry = null;
         $selectedEntryTitle = null;
         $selectedEntryHtml = null;
+        $selectedEntryRaw = null;
         $selectedEntryAuthor = null;
         $selectedEntryAttachments = [];
 
@@ -103,6 +104,7 @@ class VaultController extends Controller
                 $selectedEntryAuthor = trim((string) ($selectedEntry->author?->nickname ?? ''));
 
                 $markdown = $this->safeDecrypt($selectedEntry->content_enc, $dataKey);
+                $selectedEntryRaw = $markdown;
                 $selectedEntryHtml = $this->renderMarkdown($markdown);
 
                 $entryAttachments = $selectedEntry->attachments()->orderBy('id')->get();
@@ -168,6 +170,7 @@ class VaultController extends Controller
             'selectedEntryTitle' => $selectedEntryTitle,
             'selectedEntryAuthor' => $selectedEntryAuthor,
             'selectedEntryHtml' => $selectedEntryHtml,
+            'selectedEntryRaw' => $selectedEntryRaw,
             'selectedEntryAttachments' => $selectedEntryAttachments,
             'workspaceMode' => $workspaceMode,
             'draftEntryDate' => $draftEntryDate,

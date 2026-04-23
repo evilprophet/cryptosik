@@ -184,6 +184,9 @@
                                     spellChecker: false,
                                     status: ['lines', 'words'],
                                 });
+                                window.CryptosikUi?.setupSimpleMde?.(markdownEditor, {
+                                    title: @json(__('messages.vault.workspace.emoji_picker')),
+                                });
 
                                 markdownEditor.codemirror.on('change', () => {
                                     updateContentCounter();
@@ -280,6 +283,9 @@
                                         spellChecker: false,
                                         status: false,
                                     });
+                                    window.CryptosikUi?.setupSimpleMde?.(descriptionEditor, {
+                                        title: @json(__('messages.vault.workspace.emoji_picker')),
+                                    });
                                 };
 
                                 const openModal = () => {
@@ -328,17 +334,28 @@
                     @if ($selectedEntry)
                         <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
                             <h3 class="text-lg font-semibold text-base-content">#{{ $selectedEntry->sequence_no }} {{ $selectedEntryTitle }}</h3>
-                            <button id="open-entry-attachments" type="button" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-xs font-medium text-base-content hover:bg-base-300/80 cursor-pointer">
-                                {{ __('messages.vault.workspace.entry_attachments') }} ({{ count($selectedEntryAttachments) }})
-                            </button>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="inline-flex rounded-md border border-base-300 bg-base-300 p-1">
+                                    <button id="entry-view-rendered" type="button" class="entry-view-toggle-btn rounded px-2.5 py-1 text-xs font-medium" data-entry-view="rendered">
+                                        {{ __('messages.vault.workspace.view_rendered') }}
+                                    </button>
+                                    <button id="entry-view-raw" type="button" class="entry-view-toggle-btn rounded px-2.5 py-1 text-xs font-medium" data-entry-view="raw">
+                                        {{ __('messages.vault.workspace.view_raw') }}
+                                    </button>
+                                </div>
+                                <button id="open-entry-attachments" type="button" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-xs font-medium text-base-content hover:bg-base-300/80 cursor-pointer">
+                                    {{ __('messages.vault.workspace.entry_attachments') }} ({{ count($selectedEntryAttachments) }})
+                                </button>
+                            </div>
                         </div>
                         <p class="mb-3 text-xs text-base-content/60">
                             {{ __('messages.vault.workspace.sequence_line', ['nickname' => $selectedEntryAuthor, 'entry_date' => $selectedEntry->entry_date?->format('Y-m-d') ?? $selectedEntry->finalized_at->format('Y-m-d'), 'date' => $selectedEntry->finalized_at->format('Y-m-d H:i')]) }}
                         </p>
                         <div class="min-h-0 flex-1 overflow-y-auto">
-                            <article class="markdown-content max-w-none rounded-lg border border-base-300 bg-base-100/40 p-4">
+                            <article id="entry-rendered-view" class="markdown-content max-w-none rounded-lg border border-base-300 bg-base-100/40 p-4">
                                 {!! $selectedEntryHtml !!}
                             </article>
+                            <pre id="entry-raw-view" class="hidden whitespace-pre-wrap rounded-lg border border-base-300 bg-base-100/40 p-4 text-sm leading-7 text-base-content">{{ $selectedEntryRaw ?? '' }}</pre>
                         </div>
 
                         <div id="entry-attachments-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-base-100/80 p-4 backdrop-blur-sm" aria-hidden="true">
@@ -367,6 +384,10 @@
                             (() => {
                                 const openButton = document.getElementById('open-entry-attachments');
                                 const modal = document.getElementById('entry-attachments-modal');
+                                const renderedButton = document.getElementById('entry-view-rendered');
+                                const rawButton = document.getElementById('entry-view-raw');
+                                const renderedView = document.getElementById('entry-rendered-view');
+                                const rawView = document.getElementById('entry-raw-view');
 
                                 if (!openButton || !modal) {
                                     return;
@@ -386,8 +407,27 @@
                                     modal.setAttribute('aria-hidden', 'true');
                                 };
 
+                                const setViewMode = (mode) => {
+                                    if (!renderedButton || !rawButton || !renderedView || !rawView) {
+                                        return;
+                                    }
+
+                                    const showRendered = mode !== 'raw';
+
+                                    renderedView.classList.toggle('hidden', !showRendered);
+                                    rawView.classList.toggle('hidden', showRendered);
+
+                                    renderedButton.classList.toggle('bg-success', showRendered);
+                                    renderedButton.classList.toggle('text-success-content', showRendered);
+                                    rawButton.classList.toggle('bg-success', !showRendered);
+                                    rawButton.classList.toggle('text-success-content', !showRendered);
+                                };
+
                                 openButton.addEventListener('click', openModal);
                                 closeButtons.forEach((button) => button.addEventListener('click', closeModal));
+
+                                renderedButton?.addEventListener('click', () => setViewMode('rendered'));
+                                rawButton?.addEventListener('click', () => setViewMode('raw'));
 
                                 modal.addEventListener('click', (event) => {
                                     if (event.target === modal) {
@@ -400,6 +440,9 @@
                                         closeModal();
                                     }
                                 });
+
+                                setViewMode('rendered');
+                                window.CryptosikUi?.applyEmoji?.(renderedView);
                             })();
                         </script>
                     @else

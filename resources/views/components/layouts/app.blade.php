@@ -216,6 +216,235 @@
     </script>
 @endif
 
+<script src="{{ asset('vendor/twemoji/twemoji.min.js') }}"></script>
+<script>
+    (() => {
+        const emojiStyle = 'google';
+        const emojiBaseUrl = 'https://cdn.jsdelivr.net/npm/emoji-datasource-google/img/google/64/';
+        const emojiMartPickerModuleUrl = '/vendor/emoji-mart/module.js';
+        const emojiMartDataUrl = '/vendor/emoji-mart/data/google.json';
+        const emojiSpriteSheetUrl = '/vendor/emoji-mart/sheets/google-64.png';
+
+        let picker = null;
+        let pickerTargetEditor = null;
+        let pickerTrigger = null;
+        let pickerLoadPromise = null;
+        let pickerInitialized = false;
+
+        const applyEmoji = (container) => {
+            if (!container || typeof window.twemoji === 'undefined') {
+                return;
+            }
+
+            window.twemoji.parse(container, {
+                className: 'emoji-glyph',
+                callback: (icon) => `${emojiBaseUrl}${icon}.png`,
+                attributes: () => ({
+                    draggable: 'false',
+                    loading: 'lazy',
+                    decoding: 'async',
+                }),
+            });
+        };
+
+        const closePicker = () => {
+            if (!picker) {
+                return;
+            }
+
+            picker.classList.add('hidden');
+            pickerTargetEditor = null;
+            pickerTrigger = null;
+        };
+
+        const loadPickerDependencies = async () => {
+            if (!pickerLoadPromise) {
+                pickerLoadPromise = Promise.all([
+                    import(emojiMartPickerModuleUrl),
+                    fetch(emojiMartDataUrl).then((response) => {
+                        if (!response.ok) {
+                            throw new Error(`Failed to load emoji data (${response.status})`);
+                        }
+
+                        return response.json();
+                    }),
+                ]).then(([pickerModule, data]) => {
+                    const Picker = pickerModule.Picker ?? pickerModule.default?.Picker;
+
+                    if (!Picker || !data) {
+                        throw new Error('Unable to initialize emoji picker modules.');
+                    }
+
+                    return {
+                        Picker,
+                        data,
+                    };
+                }).catch((error) => {
+                    pickerLoadPromise = null;
+                    throw error;
+                });
+            }
+
+            return pickerLoadPromise;
+        };
+
+        const buildPicker = async () => {
+            if (!picker) {
+                picker = document.createElement('div');
+                picker.id = 'cryptosik-emoji-picker';
+                picker.className = 'emoji-picker-popover hidden';
+
+                const host = document.createElement('div');
+                host.className = 'emoji-picker-host';
+                picker.appendChild(host);
+
+                document.body.appendChild(picker);
+            }
+
+            if (!pickerInitialized) {
+                const { Picker, data } = await loadPickerDependencies();
+                const host = picker.querySelector('.emoji-picker-host');
+
+                if (!host) {
+                    throw new Error('Emoji picker host not found.');
+                }
+
+                const pickerWidget = new Picker({
+                    data,
+                    set: emojiStyle,
+                    getSpritesheetURL: () => emojiSpriteSheetUrl,
+                    theme: 'dark',
+                    dynamicWidth: true,
+                    perLine: 9,
+                    maxFrequentRows: 1,
+                    previewPosition: 'none',
+                    navPosition: 'top',
+                    searchPosition: 'sticky',
+                    skinTonePosition: 'search',
+                    locale: (document.documentElement.lang || 'en').slice(0, 2),
+                    onEmojiSelect: (emoji) => {
+                        if (!pickerTargetEditor) {
+                            return;
+                        }
+
+                        const selectedEmoji = emoji?.native ?? '';
+
+                        if (selectedEmoji === '') {
+                            return;
+                        }
+
+                        pickerTargetEditor.codemirror.replaceSelection(selectedEmoji);
+                        pickerTargetEditor.codemirror.focus();
+                        closePicker();
+                    },
+                });
+
+                host.appendChild(pickerWidget);
+                pickerInitialized = true;
+            }
+
+            return picker;
+        };
+
+        const openPicker = async (editor, triggerElement) => {
+            try {
+                const pickerElement = await buildPicker();
+                const triggerRect = triggerElement.getBoundingClientRect();
+
+                pickerTargetEditor = editor;
+                pickerTrigger = triggerElement;
+
+                const top = triggerRect.bottom + window.scrollY + 8;
+                const left = Math.max(12, triggerRect.left + window.scrollX - 220);
+
+                pickerElement.style.top = `${top}px`;
+                pickerElement.style.left = `${left}px`;
+                pickerElement.classList.remove('hidden');
+            } catch (error) {
+                console.error('Failed to open emoji picker', error);
+            }
+        };
+
+        const setupSimpleMde = (editor, options = {}) => {
+            if (!editor || !editor.gui || !editor.gui.toolbar) {
+                return;
+            }
+
+            const toolbar = editor.gui.toolbar;
+
+            if (toolbar.querySelector('[data-cryptosik-emoji]')) {
+                return;
+            }
+
+            const button = document.createElement('a');
+            button.href = '#';
+            button.className = 'no-disable';
+            button.dataset.cryptosikEmoji = '1';
+            button.title = options.title ?? 'Emoji';
+            button.setAttribute('aria-label', button.title);
+            button.innerHTML = '<i class="fa fa-smile-o" aria-hidden="true"></i>';
+
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                openPicker(editor, button);
+            });
+
+            toolbar.appendChild(button);
+
+            const wrapper = editor.gui.wrapper;
+            const observer = new MutationObserver(() => {
+                wrapper.querySelectorAll('.editor-preview, .editor-preview-side, .editor-preview-full').forEach((previewNode) => {
+                    applyEmoji(previewNode);
+                });
+            });
+
+            observer.observe(wrapper, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+            });
+        };
+
+        document.addEventListener('click', (event) => {
+            if (!picker || picker.classList.contains('hidden')) {
+                return;
+            }
+
+            const target = event.target;
+
+            if (!(target instanceof Node)) {
+                closePicker();
+                return;
+            }
+
+            const clickedInsidePicker = picker.contains(target);
+            const clickedTrigger = pickerTrigger instanceof HTMLElement && pickerTrigger.contains(target);
+
+            if (!clickedInsidePicker && !clickedTrigger) {
+                closePicker();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closePicker();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.markdown-content').forEach((node) => {
+                applyEmoji(node);
+            });
+        });
+
+        window.CryptosikUi = {
+            applyEmoji,
+            setupSimpleMde,
+            closeEmojiPicker: closePicker,
+        };
+    })();
+</script>
+
 @if ($hasSimpleMdeJs)
     <script src="{{ asset('vendor/simplemde/simplemde.min.js') }}" defer></script>
 @endif

@@ -32,6 +32,7 @@ return [
             'otp' => 'OTP (6 dígitos)',
             'verify_continue' => 'Entrar A La Bóveda',
             'change_email' => 'Usar Otro Email',
+            'dev_mode_code' => 'OTP en modo dev: :code',
             'status' => [
                 'code_issued' => 'Si la cuenta existe, se ha emitido un código de acceso.',
             ],
@@ -78,6 +79,9 @@ return [
             'title' => 'Título',
             'content_markdown' => 'Contenido (Markdown)',
             'description_markdown' => 'Descripcion (Markdown)',
+            'view_rendered' => 'Renderizado',
+            'view_raw' => 'Markdown crudo',
+            'emoji_picker' => 'Insertar emoji',
             'attachments' => 'Adjuntos del borrador',
             'no_attachments' => 'No hay adjuntos en el borrador actual.',
             'attachment' => 'Adjunto',

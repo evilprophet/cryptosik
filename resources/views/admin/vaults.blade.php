@@ -250,6 +250,9 @@
                     spellChecker: false,
                     status: false,
                 });
+                window.CryptosikUi?.setupSimpleMde?.(createVaultDescriptionEditor, {
+                    title: @json(__('messages.vault.workspace.emoji_picker')),
+                });
             };
 
             openButtons.forEach((button) => {

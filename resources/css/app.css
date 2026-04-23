@@ -480,3 +480,36 @@
         text-underline-offset: 2px;
     }
 }
+
+@layer components {
+    .entry-view-toggle-btn {
+        color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-base-200) 22%);
+    }
+
+    .emoji-glyph {
+        display: inline-block;
+        width: 1.15em;
+        height: 1.15em;
+        margin: 0 0.02em;
+        vertical-align: -0.2em;
+    }
+
+    .emoji-picker-popover {
+        position: absolute;
+        z-index: 70;
+        width: min(27rem, calc(100vw - 1.5rem));
+        border-radius: 0.9rem;
+        border: 1px solid var(--color-base-300);
+        background: color-mix(in oklab, var(--color-base-200) 92%, var(--color-base-100) 8%);
+        box-shadow: 0 16px 40px color-mix(in oklab, black 35%, transparent);
+        padding: 0.5rem;
+    }
+
+    .emoji-picker-host {
+        min-height: 24rem;
+    }
+
+    .emoji-picker-host > * {
+        width: 100%;
+    }
+}

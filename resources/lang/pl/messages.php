@@ -32,6 +32,7 @@ return [
             'otp' => 'OTP (6 cyfr)',
             'verify_continue' => 'Wejdź do sejfu',
             'change_email' => 'To nie ten email',
+            'dev_mode_code' => 'Kod OTP w trybie dev: :code',
             'status' => [
                 'code_issued' => 'Jeśli konto istnieje, kod logowania został wygenerowany.',
             ],
@@ -78,6 +79,9 @@ return [
             'title' => 'Tytuł',
             'content_markdown' => 'Treść (Markdown)',
             'description_markdown' => 'Opis (Markdown)',
+            'view_rendered' => 'Wyrenderowany',
+            'view_raw' => 'Surowy Markdown',
+            'emoji_picker' => 'Wstaw emoji',
             'attachments' => 'Załączniki szkicu',
             'no_attachments' => 'Brak załączników w aktualnym szkicu.',
             'attachment' => 'Załącznik',
