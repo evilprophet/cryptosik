@@ -171,7 +171,7 @@ Acceptance criteria:
 1. Scheduler runs integrity verification every 3 hours.
 2. Scheduler runs OTP prune hourly.
 3. Scheduler runs weekly unread digest by `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`, Saturday 09:00).
-4. Container cron triggers `php artisan schedule:run` every minute.
+4. Docker Compose starts a dedicated `scheduler` service with `php artisan schedule:work`.
 
 ### US-021 - Weekly unread digest email
 As a user, I want periodic email summaries about unread entries.

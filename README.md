@@ -31,7 +31,7 @@ For stack details, see [docs/tech-stack.md](docs/tech-stack.md).
 ├── config/             # Runtime configuration
 ├── data/               # Persistent runtime data (docker entrypoint target)
 ├── database/           # Migrations, factories, seeders
-├── docker/             # Container entrypoint and scheduler cron
+├── docker/             # Container entrypoint
 ├── docs/               # Project documentation
 ├── public/             # Public web root and built frontend assets
 ├── resources/          # Blade views, frontend assets, translations
@@ -95,7 +95,7 @@ docker compose exec app php artisan cryptosik:admin-create '{username}' '{passwo
 
 Notes:
 - Container entrypoint runs migrations automatically.
-- Container cron runs Laravel scheduler every minute.
+- `scheduler` service runs Laravel scheduler with `php artisan schedule:work`.
 
 ### Option 2: Clone full project (local development)
 

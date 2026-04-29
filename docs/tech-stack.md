@@ -75,18 +75,20 @@ Laravel scheduler definitions (`routes/console.php`):
 - `cryptosik:otp-prune` hourly
 - `cryptosik:notifications:weekly-unread` by `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`, Saturday 09:00)
 
-Container cron:
-- Runs `php artisan schedule:run` every minute (`docker/cron/laravel-scheduler`)
+Container scheduler:
+- Docker Compose starts a dedicated `scheduler` service.
+- The scheduler service uses the same application image and runs `php artisan schedule:work`.
+- Both `app` and `scheduler` mount the same `./data` directory.
 
 ## 🐳 Containerization and Deployment
 
 - `Dockerfile` builds vendor dependencies and app runtime image
 - `docker-compose.yml` runs GHCR image: `ghcr.io/evilprophet/cryptosik:latest`
+- `docker-compose.yml` defines separate `app` and `scheduler` services
 - Entrypoint responsibilities:
   - prepare persistent directories,
   - create symlinks,
-  - run migrations,
-  - start cron and Apache.
+  - run migrations for the web container.
 
 ## ✅ Development and Quality Tooling
 

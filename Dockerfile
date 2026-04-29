@@ -27,7 +27,7 @@ RUN npm run build
 FROM php:8.3-apache
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends cron libsqlite3-dev libzip-dev pkg-config unzip \
+    && apt-get install -y --no-install-recommends libsqlite3-dev libzip-dev pkg-config unzip \
     && docker-php-ext-install pdo_sqlite zip \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
@@ -43,11 +43,9 @@ WORKDIR /var/www/html
 
 COPY --from=vendor /app /var/www/html
 COPY --from=frontend /app/public/build /var/www/html/public/build
-COPY docker/cron/laravel-scheduler /etc/cron.d/laravel-scheduler
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
-RUN chmod 0644 /etc/cron.d/laravel-scheduler \
-    && chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 8080
 

@@ -37,12 +37,13 @@ if [ "${DB_CONNECTION:-sqlite}" = "sqlite" ]; then
     touch "$DB_DATABASE"
 fi
 
+php artisan package:discover --ansi
+
+if [ "${1:-}" = "apache2-foreground" ]; then
+    php artisan migrate --force --no-interaction
+fi
+
 chown -R www-data:www-data data storage bootstrap/cache
 chmod -R ug+rwX data
-
-php artisan package:discover --ansi
-php artisan migrate --force --no-interaction
-
-cron
 
 exec "$@"

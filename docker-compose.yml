@@ -9,3 +9,17 @@ services:
     volumes:
       - ./data:/var/www/html/data
     restart: unless-stopped
+
+  scheduler:
+    image: ghcr.io/evilprophet/cryptosik:latest
+    container_name: cryptosik-scheduler
+    env_file:
+      - .env
+    volumes:
+      - ./data:/var/www/html/data
+    working_dir: /var/www/html
+    user: www-data
+    command: php artisan schedule:work --no-interaction
+    depends_on:
+      - app
+    restart: unless-stopped
