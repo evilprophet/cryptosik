@@ -46,4 +46,8 @@ fi
 chown -R www-data:www-data data storage bootstrap/cache
 chmod -R ug+rwX data
 
+if [ "${1:-}" = "php" ]; then
+    exec su -p -s /bin/sh www-data -c "$*"
+fi
+
 exec "$@"
