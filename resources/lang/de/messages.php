@@ -15,6 +15,7 @@ return [
     'common' => [
         'yes' => 'ja',
         'no' => 'nein',
+        'close' => 'Schließen',
     ],
     'nav' => [
         'settings' => 'Einstellungen',
@@ -191,6 +192,7 @@ return [
             'send_owner_notification_now' => 'Owner-E-Mail jetzt senden',
             'last_notification' => 'Letzte Benachrichtigung',
             'never_notified' => 'nie',
+            'unread_entries' => 'Ungelesene Einträge',
             'integrity' => [
                 'not_checked' => 'Noch nicht geprüft',
                 'checked_at' => 'Letzte Prüfung: :time',
@@ -223,6 +225,22 @@ return [
                 'member_notification_failed' => 'Mitgliedschafts-E-Mail konnte nicht gesendet werden.',
                 'not_found' => 'Tresor nicht gefunden.',
             ],
+        ],
+        'logs' => [
+            'title' => 'Admin Log',
+            'actor_type' => 'Aktor-Typ',
+            'action_prefix' => 'Aktionspräfix',
+            'any' => 'Beliebig',
+            'filter' => 'Filtern',
+            'clear' => 'Zurücksetzen',
+            'time' => 'Zeit',
+            'actor' => 'Aktor',
+            'action' => 'Aktion',
+            'target' => 'Ziel',
+            'empty' => 'Keine Audit-Logs gefunden.',
+            'pagination' => 'Admin-Log-Seiten',
+            'previous' => 'Zurück',
+            'next' => 'Weiter',
         ],
     ],
     'mail' => [

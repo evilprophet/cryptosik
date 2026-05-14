@@ -10,6 +10,7 @@ use EvilStudio\Cryptosik\Models\Admin;
 use EvilStudio\Cryptosik\Models\AuditLog;
 use EvilStudio\Cryptosik\Models\ChainVerificationRun;
 use EvilStudio\Cryptosik\Models\Entry;
+use EvilStudio\Cryptosik\Models\EntryRead;
 use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Services\Vault\VaultAccessService;
@@ -86,6 +87,66 @@ class AdminManagementFlowsTest extends TestCase
         });
         $response->assertViewHas('latestVaults', static function ($vaults) use ($vault): bool {
             return $vaults->pluck('id')->contains($vault->id);
+        });
+    }
+
+    public function test_vault_list_exposes_unread_entry_count_per_member(): void
+    {
+        $admin = $this->createAdmin();
+        $owner = $this->createUser('unread-owner@example.com', 'Owner');
+
+        $vault = app(VaultAccessService::class)->createVault(
+            owner: $owner,
+            vaultKey: 'unread-vault-key-123',
+            name: 'Unread Vault',
+            description: 'Unread count fixture',
+        );
+
+        $firstEntry = Entry::query()->create([
+            'vault_id' => $vault->id,
+            'sequence_no' => 1,
+            'entry_date' => now()->toDateString(),
+            'title_enc' => 'enc-title-1',
+            'content_enc' => 'enc-content-1',
+            'content_format' => 'markdown',
+            'prev_hash' => null,
+            'entry_hash' => hash('sha256', 'unread-entry-1'),
+            'attachment_hash' => hash('sha256', 'unread-attachments-1'),
+            'created_by' => $owner->id,
+            'finalized_at' => Carbon::now()->subMinute(),
+        ]);
+
+        Entry::query()->create([
+            'vault_id' => $vault->id,
+            'sequence_no' => 2,
+            'entry_date' => now()->toDateString(),
+            'title_enc' => 'enc-title-2',
+            'content_enc' => 'enc-content-2',
+            'content_format' => 'markdown',
+            'prev_hash' => hash('sha256', 'unread-entry-1'),
+            'entry_hash' => hash('sha256', 'unread-entry-2'),
+            'attachment_hash' => hash('sha256', 'unread-attachments-2'),
+            'created_by' => $owner->id,
+            'finalized_at' => Carbon::now(),
+        ]);
+
+        EntryRead::query()->create([
+            'entry_id' => $firstEntry->id,
+            'user_id' => $owner->id,
+            'read_at' => Carbon::now(),
+        ]);
+
+        $response = $this
+            ->withSession($this->adminSession($admin))
+            ->get(route('admin.vaults.index'));
+
+        $response->assertOk();
+        $response->assertSee('Unread entries');
+        $response->assertViewHas('vaults', static function ($vaults) use ($vault): bool {
+            $listedVault = $vaults->getCollection()->firstWhere('id', $vault->id);
+            $member = $listedVault?->members->first();
+
+            return (int) $member?->getAttribute('unread_entries_count') === 1;
         });
     }
 
@@ -490,6 +551,32 @@ class AdminManagementFlowsTest extends TestCase
         $filteredResponse->assertDontSee('admin.login.success');
         $filteredResponse->assertViewHas('actorType', 'user');
         $filteredResponse->assertViewHas('action', 'user.login');
+    }
+
+    public function test_admin_logs_render_numbered_pagination(): void
+    {
+        $admin = $this->createAdmin();
+
+        foreach (range(1, 60) as $index) {
+            AuditLog::query()->create([
+                'actor_type' => 'admin',
+                'actor_id' => $admin->id,
+                'action' => sprintf('admin.pagination.%02d', $index),
+                'target_type' => 'admin',
+                'target_id' => (string) $admin->id,
+                'metadata_json' => null,
+                'created_at' => Carbon::now()->subSeconds($index),
+            ]);
+        }
+
+        $response = $this
+            ->withSession($this->adminSession($admin))
+            ->get(route('admin.logs.index'));
+
+        $response->assertOk();
+        $response->assertSee('Admin log pages');
+        $response->assertSee('2');
+        $response->assertSee(__('messages.admin.logs.next'));
     }
 
     private function createAdmin(): Admin

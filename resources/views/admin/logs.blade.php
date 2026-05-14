@@ -52,6 +52,47 @@
             </table>
         </div>
 
-        <div class="mt-4">{{ $logs->links() }}</div>
+        @if ($logs->lastPage() > 1)
+            @php($currentPage = $logs->currentPage())
+            @php($lastPage = $logs->lastPage())
+            @php($firstVisiblePage = max(1, $currentPage - 2))
+            @php($lastVisiblePage = min($lastPage, $currentPage + 2))
+
+            <nav class="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm" aria-label="{{ __('messages.admin.logs.pagination') }}">
+                @if ($logs->onFirstPage())
+                    <span class="rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content/40">{{ __('messages.admin.logs.previous') }}</span>
+                @else
+                    <a href="{{ $logs->previousPageUrl() }}" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-base-content hover:bg-base-300 cursor-pointer select-text">{{ __('messages.admin.logs.previous') }}</a>
+                @endif
+
+                @if ($firstVisiblePage > 1)
+                    <a href="{{ $logs->url(1) }}" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-base-content hover:bg-base-300 cursor-pointer select-text">1</a>
+                    @if ($firstVisiblePage > 2)
+                        <span class="px-2 py-2 text-base-content/50">...</span>
+                    @endif
+                @endif
+
+                @foreach (range($firstVisiblePage, $lastVisiblePage) as $page)
+                    @if ($page === $currentPage)
+                        <span class="rounded-md border border-primary bg-primary px-3 py-2 text-primary-content" aria-current="page">{{ $page }}</span>
+                    @else
+                        <a href="{{ $logs->url($page) }}" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-base-content hover:bg-base-300 cursor-pointer select-text">{{ $page }}</a>
+                    @endif
+                @endforeach
+
+                @if ($lastVisiblePage < $lastPage)
+                    @if ($lastVisiblePage < $lastPage - 1)
+                        <span class="px-2 py-2 text-base-content/50">...</span>
+                    @endif
+                    <a href="{{ $logs->url($lastPage) }}" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-base-content hover:bg-base-300 cursor-pointer select-text">{{ $lastPage }}</a>
+                @endif
+
+                @if ($logs->hasMorePages())
+                    <a href="{{ $logs->nextPageUrl() }}" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-base-content hover:bg-base-300 cursor-pointer select-text">{{ __('messages.admin.logs.next') }}</a>
+                @else
+                    <span class="rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content/40">{{ __('messages.admin.logs.next') }}</span>
+                @endif
+            </nav>
+        @endif
     </section>
 </x-layouts.admin>

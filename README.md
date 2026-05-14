@@ -188,6 +188,7 @@ Important runtime variables:
 | `php artisan cryptosik:verify-chains {--vault=}`                    | Verify hash-chain integrity for active/archived vaults. |
 | `php artisan cryptosik:otp-prune {--dry-run}`                       | Delete obsolete OTP records (consumed/expired).         |
 | `php artisan cryptosik:notifications:weekly-unread {--per-vault=5}` | Send weekly unread digest notifications.                |
+| `php artisan cryptosik:audit-logs-prune {--retention=30}`           | Prune audit logs using configured or overridden retention. |
 
 ### Common development commands
 

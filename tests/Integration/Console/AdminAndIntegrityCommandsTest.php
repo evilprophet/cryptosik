@@ -14,6 +14,7 @@ use EvilStudio\Cryptosik\Services\Vault\EntryService;
 use EvilStudio\Cryptosik\Services\Vault\VaultAccessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Component\Console\Command\Command;
 use Tests\TestCase;
@@ -197,6 +198,71 @@ class AdminAndIntegrityCommandsTest extends TestCase
         $errorMessage = $failedIntegrityAuditLog?->metadata_json['error'] ?? null;
         $this->assertIsString($errorMessage);
         $this->assertNotSame('', trim((string) $errorMessage));
+    }
+
+    public function test_prune_audit_logs_command_respects_configured_retention(): void
+    {
+        config(['cryptosik.audit_logs.retention_days' => '30']);
+
+        AuditLog::query()->create([
+            'actor_type' => 'system',
+            'actor_id' => 0,
+            'action' => 'old.audit.event',
+            'target_type' => 'system',
+            'target_id' => null,
+            'metadata_json' => null,
+            'created_at' => Carbon::now()->subDays(31),
+        ]);
+
+        AuditLog::query()->create([
+            'actor_type' => 'system',
+            'actor_id' => 0,
+            'action' => 'fresh.audit.event',
+            'target_type' => 'system',
+            'target_id' => null,
+            'metadata_json' => null,
+            'created_at' => Carbon::now()->subDays(29),
+        ]);
+
+        $this->artisan('cryptosik:audit-logs-prune')
+            ->expectsOutput('Audit log pruning completed: 1 deleted.')
+            ->assertSuccessful();
+
+        $this->assertDatabaseMissing('audit_logs', [
+            'action' => 'old.audit.event',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'fresh.audit.event',
+        ]);
+    }
+
+    public function test_prune_audit_logs_command_skips_never_and_rejects_invalid_retention(): void
+    {
+        config(['cryptosik.audit_logs.retention_days' => 'never']);
+
+        AuditLog::query()->create([
+            'actor_type' => 'system',
+            'actor_id' => 0,
+            'action' => 'kept.audit.event',
+            'target_type' => 'system',
+            'target_id' => null,
+            'metadata_json' => null,
+            'created_at' => Carbon::now()->subDays(120),
+        ]);
+
+        $this->artisan('cryptosik:audit-logs-prune')
+            ->expectsOutput('Audit log pruning skipped: retention is never.')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'kept.audit.event',
+        ]);
+
+        $this->artisan('cryptosik:audit-logs-prune', [
+            '--retention' => '45',
+        ])
+            ->expectsOutput('Invalid audit log retention. Allowed values: never, 30, 60, 90, 120.')
+            ->assertExitCode(Command::FAILURE);
     }
 
     /**

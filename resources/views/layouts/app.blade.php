@@ -84,8 +84,11 @@
     </header>
 
     @if (session('status'))
-        <div class="mb-4 rounded-lg border border-success/70 bg-base-200 px-4 py-3 text-sm font-medium text-base-content shadow-sm">
-            {{ session('status') }}
+        <div data-dismissible-flash class="mb-4 flex items-start justify-between gap-3 rounded-lg border border-success/70 bg-base-200 px-4 py-3 text-sm font-medium text-base-content shadow-sm">
+            <span>{{ session('status') }}</span>
+            <button type="button" data-dismiss-flash class="rounded-md px-2 py-0.5 text-base-content/70 hover:bg-base-300 hover:text-base-content cursor-pointer select-text" aria-label="{{ __('messages.common.close') }}">
+                {{ __('messages.common.close') }}
+            </button>
         </div>
     @endif
 
@@ -101,6 +104,16 @@
 
     {{ $slot }}
 </div>
+
+<script>
+    (() => {
+        document.querySelectorAll('[data-dismiss-flash]').forEach((button) => {
+            button.addEventListener('click', () => {
+                button.closest('[data-dismissible-flash]')?.remove();
+            });
+        });
+    })();
+</script>
 
 @livewireScripts
 </body>

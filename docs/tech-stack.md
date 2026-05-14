@@ -74,6 +74,11 @@ Laravel scheduler definitions (`routes/console.php`):
 - `cryptosik:verify-chains` every 3 hours
 - `cryptosik:otp-prune` hourly
 - `cryptosik:notifications:weekly-unread` by `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`, Saturday 09:00)
+- `cryptosik:audit-logs-prune` by `CRYPTOSIK_AUDIT_LOG_PRUNE_CRON` (default `15 3 * * *`)
+
+Audit log retention:
+- `CRYPTOSIK_AUDIT_LOG_RETENTION_DAYS=never` keeps audit logs forever.
+- Allowed cleanup values: `30`, `60`, `90`, `120`.
 
 Container scheduler:
 - Docker Compose starts a dedicated `scheduler` service.

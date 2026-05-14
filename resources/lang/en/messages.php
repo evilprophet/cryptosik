@@ -15,6 +15,7 @@ return [
     'common' => [
         'yes' => 'yes',
         'no' => 'no',
+        'close' => 'Close',
     ],
     'nav' => [
         'settings' => 'Settings',
@@ -206,6 +207,7 @@ return [
             'send_owner_notification_now' => 'Send owner email now',
             'last_notification' => 'Last notification',
             'never_notified' => 'never',
+            'unread_entries' => 'Unread entries',
             'integrity' => [
                 'not_checked' => 'No checks yet',
                 'checked_at' => 'Last check: :time',
@@ -251,6 +253,9 @@ return [
             'action' => 'Action',
             'target' => 'Target',
             'empty' => 'No audit logs found.',
+            'pagination' => 'Admin log pages',
+            'previous' => 'Previous',
+            'next' => 'Next',
         ],
     ],
     'mail' => [

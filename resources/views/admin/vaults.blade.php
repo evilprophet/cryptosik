@@ -81,6 +81,10 @@
                                                         {{ __('messages.admin.vaults.last_notification') }}:
                                                         {{ $member->membership_notified_at?->format('Y-m-d H:i') ?? __('messages.admin.vaults.never_notified') }}
                                                     </p>
+                                                    <p class="text-xs text-base-content/65">
+                                                        {{ __('messages.admin.vaults.unread_entries') }}:
+                                                        {{ (int) $member->getAttribute('unread_entries_count') }}
+                                                    </p>
                                                 </div>
                                                 @if ($member->user !== null)
                                                     <form method="post" action="{{ route('admin.vaults.members.notify', ['vault' => $vault, 'user' => $member->user]) }}">

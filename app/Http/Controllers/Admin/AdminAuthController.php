@@ -42,15 +42,6 @@ class AdminAuthController extends Controller
         }
 
         $request->session()->regenerate();
-        $request->session()->forget([
-            SessionKeys::USER_ID,
-            SessionKeys::USER_EMAIL,
-            SessionKeys::USER_NICKNAME,
-            SessionKeys::UNLOCKED_VAULT_ID,
-            SessionKeys::UNLOCKED_VAULT_KEY,
-            'auth.pending_email',
-            'dev_code',
-        ]);
         $request->session()->put(SessionKeys::ADMIN_ID, $admin->id);
         $request->session()->put(SessionKeys::ADMIN_LOGIN, (string) $admin->login);
 
@@ -65,7 +56,6 @@ class AdminAuthController extends Controller
             SessionKeys::ADMIN_ID,
             SessionKeys::ADMIN_LOGIN,
         ]);
-        $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('admin.login.show');

@@ -6,6 +6,7 @@ namespace Tests\Integration\Admin;
 
 use EvilStudio\Cryptosik\Models\Admin;
 use EvilStudio\Cryptosik\Models\AuditLog;
+use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,5 +83,50 @@ class AdminLoginAuditTest extends TestCase
         $this->assertSame('admin', $auditLog?->actor_type);
         $this->assertSame('admin', $auditLog?->target_type);
         $this->assertSame('password', $auditLog?->metadata_json['auth_method'] ?? null);
+    }
+
+    public function test_admin_login_and_logout_do_not_clear_user_session(): void
+    {
+        $user = User::query()->create([
+            'email' => 'member@example.com',
+            'nickname' => 'Member',
+            'locale' => 'en',
+            'is_active' => true,
+        ]);
+
+        Admin::query()->create([
+            'login' => 'root',
+            'password_hash' => Hash::make('super-secret-password'),
+            'is_active' => true,
+        ]);
+
+        $loginResponse = $this
+            ->withSession([
+                SessionKeys::USER_ID => $user->id,
+                SessionKeys::USER_EMAIL => $user->email,
+                SessionKeys::USER_NICKNAME => $user->nickname,
+            ])
+            ->post(route('admin.login.submit'), [
+                'login' => 'root',
+                'password' => 'super-secret-password',
+            ]);
+
+        $loginResponse->assertRedirect(route('admin.dashboard'));
+        $loginResponse->assertSessionHas(SessionKeys::ADMIN_ID);
+        $loginResponse->assertSessionHas(SessionKeys::USER_ID, $user->id);
+
+        $logoutResponse = $this
+            ->withSession([
+                SessionKeys::ADMIN_ID => $loginResponse->getSession()->get(SessionKeys::ADMIN_ID),
+                SessionKeys::ADMIN_LOGIN => 'root',
+                SessionKeys::USER_ID => $user->id,
+                SessionKeys::USER_EMAIL => $user->email,
+                SessionKeys::USER_NICKNAME => $user->nickname,
+            ])
+            ->post(route('admin.logout'));
+
+        $logoutResponse->assertRedirect(route('admin.login.show'));
+        $logoutResponse->assertSessionMissing(SessionKeys::ADMIN_ID);
+        $logoutResponse->assertSessionHas(SessionKeys::USER_ID, $user->id);
     }
 }

@@ -166,6 +166,47 @@ class UserOtpFlowTest extends TestCase
         $this->assertSame('email_otp', $auditLog?->metadata_json['auth_method'] ?? null);
     }
 
+    public function test_user_login_and_logout_do_not_clear_admin_session(): void
+    {
+        User::query()->create([
+            'email' => 'member@example.com',
+            'nickname' => 'member',
+            'locale' => 'en',
+            'is_active' => true,
+        ]);
+
+        $this->post('/login/request-code', ['email' => 'member@example.com'], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $loginResponse = $this
+            ->withSession([
+                'auth.pending_email' => 'member@example.com',
+                SessionKeys::ADMIN_ID => 10,
+                SessionKeys::ADMIN_LOGIN => 'root',
+            ])
+            ->post('/login/verify-code', [
+                'email' => 'member@example.com',
+                'code' => (string) config('cryptosik.otp.dev_code'),
+            ], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $loginResponse->assertRedirect('/vault/unlock');
+        $loginResponse->assertSessionHas(SessionKeys::USER_ID);
+        $loginResponse->assertSessionHas(SessionKeys::ADMIN_ID, 10);
+
+        $logoutResponse = $this
+            ->withSession([
+                SessionKeys::USER_ID => $loginResponse->getSession()->get(SessionKeys::USER_ID),
+                SessionKeys::USER_EMAIL => 'member@example.com',
+                SessionKeys::USER_NICKNAME => 'member',
+                SessionKeys::ADMIN_ID => 10,
+                SessionKeys::ADMIN_LOGIN => 'root',
+            ])
+            ->post(route('auth.user.logout'));
+
+        $logoutResponse->assertRedirect(route('auth.user.login.show'));
+        $logoutResponse->assertSessionMissing(SessionKeys::USER_ID);
+        $logoutResponse->assertSessionHas(SessionKeys::ADMIN_ID, 10);
+    }
+
     public function test_verify_code_failure_creates_failed_audit_log(): void
     {
         User::query()->create([

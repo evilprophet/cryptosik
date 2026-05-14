@@ -29,6 +29,10 @@ return [
     'notifications' => [
         'weekly_unread_cron' => (string) env('CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON', '0 9 * * 6'),
     ],
+    'audit_logs' => [
+        'retention_days' => (string) env('CRYPTOSIK_AUDIT_LOG_RETENTION_DAYS', 'never'),
+        'prune_cron' => (string) env('CRYPTOSIK_AUDIT_LOG_PRUNE_CRON', '15 3 * * *'),
+    ],
     'admin' => [
         'path' => trim((string) env('CRYPTOSIK_ADMIN_PATH', 'admin'), " \t\n\r\0\x0B/") ?: 'admin',
     ],

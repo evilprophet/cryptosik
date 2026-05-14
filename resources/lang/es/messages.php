@@ -15,6 +15,7 @@ return [
     'common' => [
         'yes' => 'sí',
         'no' => 'no',
+        'close' => 'Cerrar',
     ],
     'nav' => [
         'settings' => 'Ajustes',
@@ -191,6 +192,7 @@ return [
             'send_owner_notification_now' => 'Enviar ahora el email al owner',
             'last_notification' => 'Última notificación',
             'never_notified' => 'nunca',
+            'unread_entries' => 'Entradas sin leer',
             'integrity' => [
                 'not_checked' => 'Sin verificación',
                 'checked_at' => 'Última verificación: :time',
@@ -223,6 +225,22 @@ return [
                 'member_notification_failed' => 'No se pudo enviar el email de membresía.',
                 'not_found' => 'Bóveda no encontrada.',
             ],
+        ],
+        'logs' => [
+            'title' => 'Admin Log',
+            'actor_type' => 'Tipo de actor',
+            'action_prefix' => 'Prefijo de acción',
+            'any' => 'Cualquiera',
+            'filter' => 'Filtrar',
+            'clear' => 'Limpiar',
+            'time' => 'Hora',
+            'actor' => 'Actor',
+            'action' => 'Acción',
+            'target' => 'Objetivo',
+            'empty' => 'No hay logs de auditoría.',
+            'pagination' => 'Páginas de Admin Log',
+            'previous' => 'Anterior',
+            'next' => 'Siguiente',
         ],
     ],
     'mail' => [

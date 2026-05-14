@@ -10,6 +10,8 @@ use EvilStudio\Cryptosik\Http\Controllers\Controller;
 use EvilStudio\Cryptosik\Http\Requests\AssignVaultMemberRequest;
 use EvilStudio\Cryptosik\Http\Requests\CreateVaultRequest;
 use EvilStudio\Cryptosik\Models\Admin;
+use EvilStudio\Cryptosik\Models\Entry;
+use EvilStudio\Cryptosik\Models\EntryRead;
 use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Models\VaultMember;
@@ -20,6 +22,7 @@ use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use RuntimeException;
 
 class AdminVaultController extends Controller
@@ -35,15 +38,19 @@ class AdminVaultController extends Controller
 
     public function index(): View
     {
+        $vaults = Vault::query()
+            ->with([
+                'members.user:id,email,nickname,is_active',
+                'latestVerificationRun',
+            ])
+            ->withCount('members')
+            ->orderByDesc('created_at')
+            ->paginate(self::PAGE_SIZE);
+
+        $this->attachUnreadEntryCounts($vaults);
+
         return view('admin.vaults', [
-            'vaults' => Vault::query()
-                ->with([
-                    'members.user:id,email,nickname,is_active',
-                    'latestVerificationRun',
-                ])
-                ->withCount('members')
-                ->orderByDesc('created_at')
-                ->paginate(self::PAGE_SIZE),
+            'vaults' => $vaults,
             'users' => User::query()->orderBy('email')->get(['id', 'email', 'nickname', 'is_active']),
         ]);
     }
@@ -233,5 +240,46 @@ class AdminVaultController extends Controller
         }
 
         return Admin::query()->find((int) $adminId);
+    }
+
+    private function attachUnreadEntryCounts(LengthAwarePaginator $vaults): void
+    {
+        $vaultIds = $vaults->getCollection()
+            ->pluck('id')
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->values();
+
+        if ($vaultIds->isEmpty()) {
+            return;
+        }
+
+        $entryTotals = Entry::query()
+            ->selectRaw('vault_id, COUNT(*) as aggregate')
+            ->whereIn('vault_id', $vaultIds)
+            ->groupBy('vault_id')
+            ->pluck('aggregate', 'vault_id');
+
+        $readCounts = EntryRead::query()
+            ->selectRaw('entries.vault_id as vault_id, entry_reads.user_id as user_id, COUNT(*) as aggregate')
+            ->join('entries', 'entries.id', '=', 'entry_reads.entry_id')
+            ->whereIn('entries.vault_id', $vaultIds)
+            ->groupBy('entries.vault_id', 'entry_reads.user_id')
+            ->get();
+
+        $readCountsByMember = [];
+
+        foreach ($readCounts as $readCount) {
+            $key = sprintf('%s:%s', (string) $readCount->vault_id, (string) $readCount->user_id);
+            $readCountsByMember[$key] = (int) $readCount->aggregate;
+        }
+
+        foreach ($vaults->getCollection() as $vault) {
+            $entryTotal = (int) ($entryTotals[(string) $vault->id] ?? 0);
+
+            foreach ($vault->members as $member) {
+                $key = sprintf('%s:%s', (string) $vault->id, (string) $member->user_id);
+                $member->setAttribute('unread_entries_count', max(0, $entryTotal - ($readCountsByMember[$key] ?? 0)));
+            }
+        }
     }
 }

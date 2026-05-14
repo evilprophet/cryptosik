@@ -64,6 +64,7 @@ Default admin path is `/admin`.
 - `php artisan cryptosik:verify-chains {--vault=}`
 - `php artisan cryptosik:otp-prune {--dry-run}`
 - `php artisan cryptosik:notifications:weekly-unread {--per-vault=5}`
+- `php artisan cryptosik:audit-logs-prune {--retention=}`
 
 ## Scheduler
 
@@ -72,6 +73,7 @@ Defined in `routes/console.php`:
 - `cryptosik:verify-chains` - every 3 hours (`0 */3 * * *`)
 - `cryptosik:otp-prune` - hourly (`0 * * * *`)
 - `cryptosik:notifications:weekly-unread` - cron from `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`, Saturday 09:00 app timezone)
+- `cryptosik:audit-logs-prune` - cron from `CRYPTOSIK_AUDIT_LOG_PRUNE_CRON` (default `15 3 * * *`)
 
 ## Framework Utility Endpoints (Not Business API)
 

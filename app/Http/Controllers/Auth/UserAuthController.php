@@ -79,8 +79,6 @@ class UserAuthController extends Controller
 
         $request->session()->regenerate();
         $request->session()->forget([
-            SessionKeys::ADMIN_ID,
-            SessionKeys::ADMIN_LOGIN,
             SessionKeys::UNLOCKED_VAULT_ID,
             SessionKeys::UNLOCKED_VAULT_KEY,
         ]);
@@ -145,7 +143,6 @@ class UserAuthController extends Controller
             'dev_code',
         ]);
 
-        $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('auth.user.login.show');

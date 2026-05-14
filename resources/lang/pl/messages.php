@@ -15,6 +15,7 @@ return [
     'common' => [
         'yes' => 'tak',
         'no' => 'nie',
+        'close' => 'Zamknij',
     ],
     'nav' => [
         'settings' => 'Ustawienia',
@@ -206,6 +207,7 @@ return [
             'send_owner_notification_now' => 'Wyślij email do właściciela teraz',
             'last_notification' => 'Ostatnie powiadomienie',
             'never_notified' => 'nigdy',
+            'unread_entries' => 'Nieprzeczytane wpisy',
             'integrity' => [
                 'not_checked' => 'Brak weryfikacji',
                 'checked_at' => 'Ostatnia weryfikacja: :time',
@@ -251,6 +253,9 @@ return [
             'action' => 'Akcja',
             'target' => 'Cel',
             'empty' => 'Brak wpisów audytu.',
+            'pagination' => 'Strony Admin Log',
+            'previous' => 'Poprzednia',
+            'next' => 'Następna',
         ],
     ],
     'mail' => [
