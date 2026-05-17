@@ -4,53 +4,31 @@
 @php($attachmentAccept = collect((array) config('cryptosik.allowed_attachment_extensions'))->map(fn ($ext) => '.'.ltrim((string) $ext, '.'))->implode(','))
 
 <x-layouts.app :header-center-title="$vaultName" :header-center-href="$vaultOverviewUrl" :show-vault-lock="true">
+    <x-slot:mobileSidebar>
+        @include('vault.partials.entry-list', [
+            'entries' => $entries,
+            'selectedEntryId' => $selectedEntryId,
+            'isMobile' => true,
+        ])
+    </x-slot:mobileSidebar>
+
     @if ($isArchived)
         <div class="mb-4 rounded-xl border border-base-300 bg-base-200 p-4 shadow-sm">
             <p class="text-sm font-medium text-warning">{{ __('messages.vault.workspace.archived_readonly') }}</p>
         </div>
     @endif
 
-    <div class="grid h-[calc(100dvh-11rem)] min-h-0 gap-4 overflow-hidden lg:grid-cols-12">
-        <aside class="flex h-full min-h-0 flex-col rounded-xl border border-base-300 bg-base-200 p-4 shadow-sm lg:col-span-3">
-            <div class="mb-3 flex items-center justify-between gap-2">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">{{ __('messages.vault.workspace.entries_chronological') }}</h3>
-                <a href="{{ route('vault.workspace', ['mode' => 'new']) }}" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-xs font-medium text-base-content hover:bg-base-300 cursor-pointer select-text">{{ __('messages.vault.workspace.new_message') }}</a>
-            </div>
-            <div class="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-                @forelse ($entries as $item)
-                    <a href="{{ route('vault.workspace', ['mode' => 'entry', 'entry' => $item['id']]) }}"
-                       @class([
-                           'block rounded-lg border px-3 py-2 transition cursor-pointer select-text',
-                           'border-success bg-success/10' => $selectedEntryId === $item['id'],
-                           'border-base-300 hover:bg-base-300' => $selectedEntryId !== $item['id'],
-                           'ring-1 ring-warning/70' => !$item['is_read'],
-                       ])>
-                        <p class="flex items-center gap-1 text-xs text-base-content/60">
-                            <span>{{ $item['entry_date'] }} - {{ $item['author_nickname'] }}</span>
-                            @if (!$item['is_read'])
-                                <span class="inline-flex rounded bg-warning/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning">{{ __('messages.vault.workspace.unread') }}</span>
-                            @endif
-                        </p>
-                        <p class="flex items-center gap-1 text-sm font-medium text-base-content">#{{ $item['sequence_no'] }} {{ $item['title'] }}
-                            @if ((int) ($item['attachments_count'] ?? 0) > 0)
-                                <span class="inline-flex items-center text-[10px] font-semibold text-secondary" title="attachments">📎{{ (int) $item['attachments_count'] }}</span>
-                            @endif
-                        </p>
-                    </a>
-                    @unless ($loop->last)
-                        <div class="flex items-center justify-center py-0.5">
-                            <span class="block h-1.5 w-1.5 rotate-45 border-t border-l border-base-content/40"></span>
-                        </div>
-                    @endunless
-                @empty
-                    <p class="text-sm text-base-content/60">{{ __('messages.vault.workspace.no_entries') }}</p>
-                @endforelse
-            </div>
+    <div class="grid h-[calc(100dvh-8.5rem)] min-h-0 gap-4 overflow-hidden lg:h-[calc(100dvh-11rem)] lg:grid-cols-12">
+        <aside class="hidden h-full min-h-0 flex-col rounded-xl border border-base-300 bg-base-200 p-4 shadow-sm lg:col-span-3 lg:flex">
+            @include('vault.partials.entry-list', [
+                'entries' => $entries,
+                'selectedEntryId' => $selectedEntryId,
+            ])
         </aside>
 
         <main class="h-full min-h-0 space-y-4 lg:col-span-9">
             @if ($isComposeMode)
-                <section class="rounded-xl border border-base-300 bg-base-200 p-6 shadow-sm h-full overflow-y-auto">
+                <section class="rounded-xl border border-base-300 bg-base-200 p-4 shadow-sm h-full overflow-y-auto lg:p-6">
                     <h3 class="mb-3 text-lg font-semibold text-base-content">{{ __('messages.vault.workspace.new_message') }}</h3>
 
                     <form id="message-compose-form" method="post" action="{{ route('vault.draft.finalize') }}" class="space-y-4">
@@ -207,7 +185,7 @@
                     </script>
                 </section>
             @elseif ($isOverviewMode)
-                <section class="rounded-xl border border-base-300 bg-base-200 p-6 shadow-sm h-full overflow-y-auto">
+                <section class="rounded-xl border border-base-300 bg-base-200 p-4 shadow-sm h-full overflow-y-auto lg:p-6">
                     <div class="mb-3 flex items-center justify-between gap-2">
                         <h3 class="text-lg font-semibold text-base-content">{{ __('messages.vault.workspace.overview_title') }}</h3>
                         @if ($isVaultOwner)
@@ -330,7 +308,7 @@
                     @endif
                 </section>
             @else
-                <section class="rounded-xl border border-base-300 bg-base-200 p-6 shadow-sm h-full overflow-y-auto">
+                <section class="rounded-xl border border-base-300 bg-base-200 p-4 shadow-sm h-full overflow-y-auto lg:p-6">
                     @if ($selectedEntry)
                         <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
                             <h3 class="text-lg font-semibold text-base-content">#{{ $selectedEntry->sequence_no }} {{ $selectedEntryTitle }}</h3>

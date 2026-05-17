@@ -18,6 +18,7 @@ return [
         'close' => 'Zamknij',
     ],
     'nav' => [
+        'menu' => 'Menu',
         'settings' => 'Ustawienia',
         'logout' => 'Wyloguj',
     ],

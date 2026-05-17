@@ -18,6 +18,7 @@
 @php($sessionNotificationsEnabled = (string) session(\EvilStudio\Cryptosik\Support\SessionKeys::USER_NOTIFICATIONS_ENABLED, '1'))
 @php($headerIdentity = $showUserControls ? ($sessionNickname !== '' ? $sessionNickname : $sessionUserEmail) : ($showAdminControls ? ($sessionAdminLogin !== '' ? $sessionAdminLogin : 'admin') : ''))
 @php($shouldOpenSettingsModal = ($showUserControls && ($errors->has('nickname') || $errors->has('locale') || $errors->has('notifications_enabled'))) || ($showAdminControls && $errors->has('locale')))
+@php($hasMobileSidebar = isset($mobileSidebar))
 
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="default-dark">
@@ -43,14 +44,39 @@
     @livewireStyles
 </head>
 <body @class(['min-h-screen', 'app-bg-admin' => $isAdmin])>
-<div class="mx-auto w-full px-4 py-6 lg:w-2/3">
+<div class="mx-auto w-full px-3 py-4 lg:w-2/3 lg:px-4 lg:py-6">
     @if (!($hasViteHot || $hasViteManifest))
         <div class="mb-4 rounded-lg border border-warning bg-warning/10 px-4 py-3 text-sm text-warning-content">
             {{ __('messages.app.assets_missing') }}
         </div>
     @endif
 
-    <header class="mb-6 rounded-xl border border-base-300 bg-base-200/85 px-5 py-4 shadow-sm backdrop-blur-sm">
+    @if ($hasMobileSidebar)
+        <header class="mb-3 grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl border border-base-300 bg-base-200/85 px-3 py-3 shadow-sm backdrop-blur-sm lg:hidden">
+            <button type="button" data-open-mobile-sidebar class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-xs font-medium text-base-content hover:bg-base-300 cursor-pointer select-text">
+                {{ __('messages.nav.menu') }}
+            </button>
+
+            @if ($headerCenterHref)
+                <a href="{{ $headerCenterHref }}" class="min-w-0 justify-self-center inline-flex items-center gap-2 text-base-content hover:opacity-90 cursor-pointer select-text">
+                    <img src="{{ asset('images/logo.png') }}" alt="Cryptosik logo" class="h-8 w-8 shrink-0 object-contain" />
+                    <span class="truncate text-base font-semibold">{{ $headerCenterTitle ?? 'Crypt(o-st)osik' }}</span>
+                </a>
+            @else
+                <div class="min-w-0 justify-self-center inline-flex items-center gap-2 text-base-content">
+                    <img src="{{ asset('images/logo.png') }}" alt="Cryptosik logo" class="h-8 w-8 shrink-0 object-contain" />
+                    <span class="truncate text-base font-semibold">{{ $headerCenterTitle ?? 'Crypt(o-st)osik' }}</span>
+                </div>
+            @endif
+
+            <span class="w-14" aria-hidden="true"></span>
+        </header>
+    @endif
+
+    <header @class([
+        'mb-6 rounded-xl border border-base-300 bg-base-200/85 px-5 py-4 shadow-sm backdrop-blur-sm',
+        'hidden lg:block' => $hasMobileSidebar,
+    ])>
         <div @class([
             'w-full gap-3',
             'grid grid-cols-[1fr_auto_1fr] items-center' => $headerCenterTitle,
@@ -84,7 +110,7 @@
                     @if ($headerIdentity !== '')
                         <span class="rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content/80">{{ $headerIdentity }}</span>
                     @endif
-                    <button id="open-settings-modal" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-base-content hover:bg-base-300 cursor-pointer select-text" type="button">
+                    <button id="open-settings-modal" data-open-settings-modal class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-base-content hover:bg-base-300 cursor-pointer select-text" type="button">
                         {{ __('messages.nav.settings') }}
                     </button>
                 @endif
@@ -133,6 +159,70 @@
     {{ $slot }}
 </div>
 
+@if ($hasMobileSidebar)
+    <div id="mobile-sidebar" class="fixed inset-0 z-40 hidden lg:hidden" aria-hidden="true">
+        <button type="button" data-close-mobile-sidebar class="absolute inset-0 h-full w-full bg-base-100/80 backdrop-blur-sm" aria-label="{{ __('messages.common.close') }}"></button>
+
+        <aside class="absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col border-r border-base-300 bg-base-200 p-4 shadow-2xl">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <div class="min-w-0 flex items-center gap-3">
+                    <img src="{{ asset('images/logo.png') }}" alt="Cryptosik logo" class="h-9 w-9 shrink-0 object-contain" />
+                    <div class="min-w-0">
+                        <p class="truncate text-base font-semibold text-base-content">Crypt(o-st)osik</p>
+                        @if ($headerCenterTitle)
+                            <p class="truncate text-xs text-base-content/60">{{ $headerCenterTitle }}</p>
+                        @endif
+                    </div>
+                </div>
+                <button type="button" data-close-mobile-sidebar class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-xs text-base-content hover:bg-base-300 cursor-pointer select-text">
+                    {{ __('messages.common.close') }}
+                </button>
+            </div>
+
+            @if ($showSettingsControls || $showVaultLock || $showUserControls || $showAdminControls)
+                <div class="mb-4 space-y-3 rounded-xl border border-base-300 bg-base-100/40 p-3">
+                    @if ($headerIdentity !== '')
+                        <div class="rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm font-medium text-base-content/80">
+                            {{ $headerIdentity }}
+                        </div>
+                    @endif
+
+                    <div class="grid grid-cols-1 gap-2 border-t border-base-300 pt-3">
+                        @if ($showSettingsControls)
+                            <button type="button" data-open-settings-modal data-close-mobile-sidebar class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-left text-sm text-base-content hover:bg-base-300 cursor-pointer select-text">
+                                {{ __('messages.nav.settings') }}
+                            </button>
+                        @endif
+
+                        @if ($showVaultLock && $showUserControls)
+                            <form method="post" action="{{ route('vault.lock') }}">
+                                @csrf
+                                <button class="w-full rounded-md border border-base-300 bg-base-300 px-3 py-2 text-left text-sm text-base-content hover:bg-base-300 cursor-pointer select-text" type="submit">{{ __('messages.vault.workspace.lock_vault') }}</button>
+                            </form>
+                        @endif
+
+                        @if ($showUserControls)
+                            <form method="post" action="{{ route('auth.user.logout') }}">
+                                @csrf
+                                <button class="w-full rounded-md border border-base-300 bg-base-300 px-3 py-2 text-left text-sm text-base-content hover:bg-base-300 cursor-pointer select-text" type="submit">{{ __('messages.nav.logout') }}</button>
+                            </form>
+                        @elseif ($showAdminControls)
+                            <form method="post" action="{{ route('admin.logout') }}">
+                                @csrf
+                                <button class="w-full rounded-md border border-base-300 bg-base-300 px-3 py-2 text-left text-sm text-base-content hover:bg-base-300 cursor-pointer select-text" type="submit">{{ __('messages.nav.logout') }}</button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            <div class="min-h-0 flex-1 overflow-hidden rounded-xl border border-base-300 bg-base-100/35 p-3">
+                {{ $mobileSidebar }}
+            </div>
+        </aside>
+    </div>
+@endif
+
 @if ($showSettingsControls)
     <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-base-100/80 p-4 backdrop-blur-sm" aria-hidden="true">
         <div class="w-full max-w-md rounded-2xl border border-base-300 bg-base-200 p-5 shadow-xl">
@@ -177,9 +267,9 @@
     <script>
         (() => {
             const modal = document.getElementById('settings-modal');
-            const openButton = document.getElementById('open-settings-modal');
+            const openButtons = document.querySelectorAll('[data-open-settings-modal]');
 
-            if (!modal || !openButton) {
+            if (!modal || openButtons.length === 0) {
                 return;
             }
 
@@ -197,7 +287,7 @@
                 modal.setAttribute('aria-hidden', 'true');
             };
 
-            openButton.addEventListener('click', openModal);
+            openButtons.forEach((button) => button.addEventListener('click', openModal));
             closeButtons.forEach((button) => button.addEventListener('click', closeModal));
 
             modal.addEventListener('click', (event) => {
@@ -218,6 +308,40 @@
         })();
     </script>
 @endif
+
+<script>
+    (() => {
+        const sidebar = document.getElementById('mobile-sidebar');
+
+        if (!sidebar) {
+            return;
+        }
+
+        const openButtons = document.querySelectorAll('[data-open-mobile-sidebar]');
+        const closeButtons = document.querySelectorAll('[data-close-mobile-sidebar]');
+
+        const openSidebar = () => {
+            sidebar.classList.remove('hidden');
+            sidebar.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        const closeSidebar = () => {
+            sidebar.classList.add('hidden');
+            sidebar.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        openButtons.forEach((button) => button.addEventListener('click', openSidebar));
+        closeButtons.forEach((button) => button.addEventListener('click', closeSidebar));
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !sidebar.classList.contains('hidden')) {
+                closeSidebar();
+            }
+        });
+    })();
+</script>
 
 <script>
     (() => {

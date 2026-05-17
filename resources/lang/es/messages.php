@@ -18,6 +18,7 @@ return [
         'close' => 'Cerrar',
     ],
     'nav' => [
+        'menu' => 'Menú',
         'settings' => 'Ajustes',
         'logout' => 'Cerrar sesión',
     ],
