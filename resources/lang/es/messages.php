@@ -83,6 +83,8 @@ return [
             'description_markdown' => 'Descripcion (Markdown)',
             'view_rendered' => 'Renderizado',
             'view_raw' => 'Markdown crudo',
+            'newer_entry' => 'Next',
+            'older_entry' => 'Prev',
             'emoji_picker' => 'Insertar emoji',
             'attachments' => 'Adjuntos del borrador',
             'no_attachments' => 'No hay adjuntos en el borrador actual.',

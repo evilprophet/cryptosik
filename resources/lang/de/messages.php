@@ -83,6 +83,8 @@ return [
             'description_markdown' => 'Beschreibung (Markdown)',
             'view_rendered' => 'Gerendert',
             'view_raw' => 'Rohes Markdown',
+            'newer_entry' => 'Next',
+            'older_entry' => 'Prev',
             'emoji_picker' => 'Emoji einfügen',
             'attachments' => 'Entwurf-Anhänge',
             'no_attachments' => 'Keine Anhänge im aktuellen Entwurf.',

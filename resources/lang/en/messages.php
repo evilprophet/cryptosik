@@ -83,6 +83,8 @@ return [
             'description_markdown' => 'Description (Markdown)',
             'view_rendered' => 'Rendered',
             'view_raw' => 'Raw Markdown',
+            'newer_entry' => 'Next',
+            'older_entry' => 'Prev',
             'emoji_picker' => 'Insert emoji',
             'attachments' => 'Draft Attachments',
             'no_attachments' => 'No attachments in current draft.',

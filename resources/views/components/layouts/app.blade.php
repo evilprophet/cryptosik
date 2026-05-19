@@ -163,8 +163,8 @@
     <div id="mobile-sidebar" class="fixed inset-0 z-40 hidden lg:hidden" aria-hidden="true">
         <button type="button" data-close-mobile-sidebar class="absolute inset-0 h-full w-full bg-base-100/80 backdrop-blur-sm" aria-label="{{ __('messages.common.close') }}"></button>
 
-        <aside class="absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col border-r border-base-300 bg-base-200 p-4 shadow-2xl">
-            <div class="mb-4 flex items-center justify-between gap-3">
+        <aside class="absolute inset-y-0 left-0 flex min-h-0 w-[min(88vw,22rem)] flex-col overflow-hidden border-r border-base-300 bg-base-200 p-4 shadow-2xl">
+            <div class="mb-4 flex shrink-0 items-center justify-between gap-3">
                 <div class="min-w-0 flex items-center gap-3">
                     <img src="{{ asset('images/logo.png') }}" alt="Cryptosik logo" class="h-9 w-9 shrink-0 object-contain" />
                     <div class="min-w-0">
@@ -180,7 +180,7 @@
             </div>
 
             @if ($showSettingsControls || $showVaultLock || $showUserControls || $showAdminControls)
-                <div class="mb-4 space-y-3 rounded-xl border border-base-300 bg-base-100/40 p-3">
+                <div class="mb-4 shrink-0 space-y-3 rounded-xl border border-base-300 bg-base-100/40 p-3">
                     @if ($headerIdentity !== '')
                         <div class="rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm font-medium text-base-content/80">
                             {{ $headerIdentity }}

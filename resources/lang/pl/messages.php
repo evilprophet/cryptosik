@@ -83,6 +83,8 @@ return [
             'description_markdown' => 'Opis (Markdown)',
             'view_rendered' => 'Wyrenderowany',
             'view_raw' => 'Surowy Markdown',
+            'newer_entry' => 'Next',
+            'older_entry' => 'Prev',
             'emoji_picker' => 'Wstaw emoji',
             'attachments' => 'Załączniki szkicu',
             'no_attachments' => 'Brak załączników w aktualnym szkicu.',

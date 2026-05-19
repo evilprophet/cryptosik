@@ -335,6 +335,27 @@
                             </article>
                             <pre id="entry-raw-view" class="hidden whitespace-pre-wrap rounded-lg border border-base-300 bg-base-100/40 p-4 text-sm leading-7 text-base-content">{{ $selectedEntryRaw ?? '' }}</pre>
                         </div>
+                        <div class="mt-3 flex w-full flex-nowrap gap-2 lg:hidden">
+                            @if ($selectedEntryOlderUrl)
+                                <a href="{{ $selectedEntryOlderUrl }}" style="flex: 0 0 calc(50% - 0.25rem); max-width: calc(50% - 0.25rem);" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-center text-xs font-medium text-base-content hover:bg-base-300 cursor-pointer select-text">
+                                    {{ __('messages.vault.workspace.older_entry') }}
+                                </a>
+                            @else
+                                <span style="flex: 0 0 calc(50% - 0.25rem); max-width: calc(50% - 0.25rem);" class="rounded-md border border-base-300 bg-base-100 px-3 py-2 text-center text-xs font-medium text-base-content/35">
+                                    {{ __('messages.vault.workspace.older_entry') }}
+                                </span>
+                            @endif
+
+                            @if ($selectedEntryNewerUrl)
+                                <a href="{{ $selectedEntryNewerUrl }}" style="flex: 0 0 calc(50% - 0.25rem); max-width: calc(50% - 0.25rem);" class="rounded-md border border-base-300 bg-base-300 px-3 py-2 text-center text-xs font-medium text-base-content hover:bg-base-300 cursor-pointer select-text">
+                                    {{ __('messages.vault.workspace.newer_entry') }}
+                                </a>
+                            @else
+                                <span style="flex: 0 0 calc(50% - 0.25rem); max-width: calc(50% - 0.25rem);" class="rounded-md border border-base-300 bg-base-100 px-3 py-2 text-center text-xs font-medium text-base-content/35">
+                                    {{ __('messages.vault.workspace.newer_entry') }}
+                                </span>
+                            @endif
+                        </div>
 
                         <div id="entry-attachments-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-base-100/80 p-4 backdrop-blur-sm" aria-hidden="true">
                             <div class="w-full max-w-2xl rounded-2xl border border-base-300 bg-base-200 p-5 shadow-xl">

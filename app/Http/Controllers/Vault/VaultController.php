@@ -94,6 +94,8 @@ class VaultController extends Controller
         $selectedEntryRaw = null;
         $selectedEntryAuthor = null;
         $selectedEntryAttachments = [];
+        $selectedEntryNewerUrl = null;
+        $selectedEntryOlderUrl = null;
 
         if ($workspaceMode === 'entry' && is_numeric($selectedEntryId)) {
             $selectedEntry = $entries->firstWhere('id', (int) $selectedEntryId);
@@ -123,11 +125,27 @@ class VaultController extends Controller
                     ];
                 }
 
+                $selectedEntryIndex = null;
+
                 foreach ($entryItems as $index => $item) {
                     if ($item['id'] === $selectedEntry->id) {
                         $entryItems[$index]['is_read'] = true;
+                        $selectedEntryIndex = $index;
 
                         break;
+                    }
+                }
+
+                if ($selectedEntryIndex !== null) {
+                    $newerEntry = $entryItems[$selectedEntryIndex - 1] ?? null;
+                    $olderEntry = $entryItems[$selectedEntryIndex + 1] ?? null;
+
+                    if ($newerEntry !== null) {
+                        $selectedEntryNewerUrl = route('vault.workspace', ['mode' => 'entry', 'entry' => $newerEntry['id']]);
+                    }
+
+                    if ($olderEntry !== null) {
+                        $selectedEntryOlderUrl = route('vault.workspace', ['mode' => 'entry', 'entry' => $olderEntry['id']]);
                     }
                 }
             }
@@ -172,6 +190,8 @@ class VaultController extends Controller
             'selectedEntryHtml' => $selectedEntryHtml,
             'selectedEntryRaw' => $selectedEntryRaw,
             'selectedEntryAttachments' => $selectedEntryAttachments,
+            'selectedEntryNewerUrl' => $selectedEntryNewerUrl,
+            'selectedEntryOlderUrl' => $selectedEntryOlderUrl,
             'workspaceMode' => $workspaceMode,
             'draftEntryDate' => $draftEntryDate,
             'draftTitle' => $draftTitle,
