@@ -6,13 +6,15 @@ namespace EvilStudio\Cryptosik\Services\Vault;
 
 use EvilStudio\Cryptosik\Enums\VaultMemberRole;
 use EvilStudio\Cryptosik\Enums\VaultStatus;
+use EvilStudio\Cryptosik\Exceptions\VaultKeyAlreadyExistsException;
 use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Models\VaultChainState;
 use EvilStudio\Cryptosik\Models\VaultCrypto;
 use EvilStudio\Cryptosik\Models\VaultMember;
 use EvilStudio\Cryptosik\Services\Crypto\CryptoService;
-use EvilStudio\Cryptosik\Services\Crypto\VaultKeyLocatorService;
+use EvilStudio\Cryptosik\Support\Values\UnlockedVault;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -20,16 +22,12 @@ class VaultAccessService
 {
     public function __construct(
         private readonly CryptoService $cryptoService,
-        private readonly VaultKeyLocatorService $locatorService,
-    ) {
-    }
+    ) {}
 
     public function createVault(User $owner, string $vaultKey, string $name, ?string $description): Vault
     {
-        $locator = $this->locatorService->deriveLocator($vaultKey);
-
-        if (VaultCrypto::query()->where('vault_locator', $locator)->exists()) {
-            throw new RuntimeException('Vault key already exists. Duplicate keys are not allowed.');
+        if ($this->keyIsAlreadyInUse($vaultKey)) {
+            throw VaultKeyAlreadyExistsException::make();
         }
 
         $dataKeyB64 = $this->cryptoService->generateDataKey();
@@ -37,15 +35,15 @@ class VaultAccessService
         $wrappingKey = $this->cryptoService->deriveWrappingKey($vaultKey, $kdfSalt);
         $wrapped = $this->cryptoService->wrapDataKey($dataKeyB64, $wrappingKey);
 
+        sodium_memzero($wrappingKey);
+
         return DB::transaction(function () use (
             $owner,
             $name,
             $description,
             $dataKeyB64,
-            $locator,
             $kdfSalt,
             $wrapped,
-            $vaultKey,
         ): Vault {
             $vault = Vault::query()->create([
                 'owner_user_id' => $owner->id,
@@ -58,15 +56,13 @@ class VaultAccessService
 
             VaultCrypto::query()->create([
                 'vault_id' => $vault->id,
-                'vault_locator' => $locator,
                 'kdf_salt' => $kdfSalt,
                 'kdf_params' => [
-                    'opslimit' => (int)config('cryptosik.crypto.argon_opslimit'),
-                    'memlimit' => (int)config('cryptosik.crypto.argon_memlimit'),
+                    'opslimit' => (int) config('cryptosik.crypto.argon_opslimit'),
+                    'memlimit' => (int) config('cryptosik.crypto.argon_memlimit'),
                 ],
                 'wrapped_data_key' => $wrapped['ciphertext'],
                 'wrap_nonce' => $wrapped['nonce'],
-                'key_fingerprint' => $this->locatorService->deriveFingerprint($vaultKey),
             ]);
 
             VaultMember::query()->create([
@@ -85,44 +81,86 @@ class VaultAccessService
         });
     }
 
-    public function unlockVaultForUser(User $user, string $vaultKey): ?array
+    /**
+     * Resolves the vault by trying to unwrap, not by a stored index. Only the user's own
+     * vaults are candidates, so membership is enforced by construction.
+     */
+    public function unlockVaultForUser(User $user, string $vaultKey): ?UnlockedVault
     {
-        $locator = $this->locatorService->deriveLocator($vaultKey);
+        $candidates = VaultCrypto::query()
+            ->with('vault')
+            ->whereIn('vault_id', $user->memberships()->select('vault_id'))
+            ->get();
 
-        $vaultCrypto = VaultCrypto::query()->with('vault')->where('vault_locator', $locator)->first();
+        $match = $this->findVaultForKey($candidates, $vaultKey);
 
-        if ($vaultCrypto === null || $vaultCrypto->vault === null) {
+        if ($match === null) {
             return null;
         }
 
-        $vault = $vaultCrypto->vault;
+        return new UnlockedVault($match['crypto']->vault, $match['data_key']);
+    }
 
-        if ($vault->status === VaultStatus::SoftDeleted || $vault->deleted_at !== null) {
-            return null;
+    // Spans archived and soft-deleted vaults too, exactly like the dropped unique index did.
+    private function keyIsAlreadyInUse(string $vaultKey): bool
+    {
+        foreach (VaultCrypto::query()->cursor() as $vaultCrypto) {
+            if ($this->unwrapDataKeyFor($vaultCrypto, $vaultKey) !== null) {
+                return true;
+            }
         }
 
-        $isMember = $vault->members()->where('user_id', $user->id)->exists();
+        return false;
+    }
 
-        if (!$isMember) {
-            return null;
+    /**
+     * @param  Collection<int, VaultCrypto>  $candidates
+     * @return array{crypto: VaultCrypto, data_key: string}|null
+     */
+    private function findVaultForKey($candidates, string $vaultKey): ?array
+    {
+        foreach ($candidates as $vaultCrypto) {
+            $vault = $vaultCrypto->vault;
+
+            // Archived means closed: readable history stays in the database, but nobody
+            // unlocks it again until an admin makes the vault active.
+            if ($vault === null || $vault->status !== VaultStatus::Active || $vault->deleted_at !== null) {
+                continue;
+            }
+
+            $dataKey = $this->unwrapDataKeyFor($vaultCrypto, $vaultKey);
+
+            if ($dataKey !== null) {
+                return ['crypto' => $vaultCrypto, 'data_key' => $dataKey];
+            }
         }
 
-        $wrappingKey = $this->cryptoService->deriveWrappingKey($vaultKey, $vaultCrypto->kdf_salt);
+        return null;
+    }
+
+    private function unwrapDataKeyFor(VaultCrypto $vaultCrypto, string $vaultKey): ?string
+    {
+        $kdfParams = is_array($vaultCrypto->kdf_params) ? $vaultCrypto->kdf_params : [];
+
+        $wrappingKey = $this->cryptoService->deriveWrappingKey(
+            $vaultKey,
+            $vaultCrypto->kdf_salt,
+            isset($kdfParams['opslimit']) ? (int) $kdfParams['opslimit'] : null,
+            isset($kdfParams['memlimit']) ? (int) $kdfParams['memlimit'] : null,
+        );
 
         try {
-            $dataKey = $this->cryptoService->unwrapDataKey(
+            return $this->cryptoService->unwrapDataKey(
                 $vaultCrypto->wrapped_data_key,
                 $vaultCrypto->wrap_nonce,
                 $wrappingKey,
             );
         } catch (RuntimeException) {
             return null;
+        } finally {
+            // Best effort: PHP copies strings, so this clears one buffer, not every trace.
+            sodium_memzero($wrappingKey);
         }
-
-        return [
-            'vault' => $vault,
-            'data_key' => $dataKey,
-        ];
     }
 
     public function decryptVaultName(Vault $vault, string $dataKey): string

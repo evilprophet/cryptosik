@@ -20,14 +20,16 @@ class VaultCrypto extends Model
 
     protected $keyType = 'string';
 
+    /**
+     * No fast hash of the vault key is stored here - vault_locator and key_fingerprint were
+     * dropped because they allowed GPU-speed guessing that bypassed Argon2id.
+     */
     protected $fillable = [
         'vault_id',
-        'vault_locator',
         'kdf_salt',
         'kdf_params',
         'wrapped_data_key',
         'wrap_nonce',
-        'key_fingerprint',
     ];
 
     protected function casts(): array

@@ -34,6 +34,7 @@ return [
             'otp' => 'OTP (6 digits)',
             'verify_continue' => 'Enter Vault',
             'change_email' => 'Use Another Email',
+            'change_language' => 'Change language',
             'dev_mode_code' => 'Dev mode OTP: :code',
             'status' => [
                 'code_issued' => 'If the account exists, a login code has been issued.',
@@ -42,6 +43,8 @@ return [
                 'restart_login' => 'Start login again by entering your email.',
                 'invalid_code' => 'Invalid or expired login code.',
                 'delivery_failed' => 'Unable to send login code email. Try again in a moment.',
+                'too_many_requests' => 'Too many code requests. Try again in :seconds seconds.',
+                'too_many_attempts' => 'Too many verification attempts. Try again in :seconds seconds.',
             ],
         ],
         'vault_unlock' => [
@@ -51,6 +54,7 @@ return [
             'unlock' => 'Unlock Vault',
             'errors' => [
                 'invalid_key' => 'Invalid vault key or no access to this vault.',
+                'too_many_attempts' => 'Too many unlock attempts. Try again in :seconds seconds.',
             ],
         ],
     ],
@@ -118,6 +122,10 @@ return [
         'errors' => [
             'readonly' => 'This vault is read-only.',
             'attachment_type_not_allowed' => 'Unsupported attachment type. Allowed formats: txt, md, pdf, odt, ods, odp, doc, docx, xls, xlsx, png, jpg, jpeg, webp.',
+            'duplicate_vault_key' => 'This vault key is already in use. Choose a different one.',
+            'attachment_limit_reached' => 'Attachment limit reached for this draft.',
+            'draft_not_found' => 'There is no draft to finalize.',
+            'crypto_failure' => 'Could not process encrypted data. Unlock the vault again and retry.',
             'attachment_not_found' => 'Attachment not found in your draft.',
             'owner_only_description' => 'Only the vault owner can update the description.',
             'title_required' => 'Vault title is required.',
@@ -142,6 +150,9 @@ return [
             'login' => 'Login',
             'password' => 'Password',
             'sign_in' => 'Sign In',
+            'errors' => [
+                'too_many_attempts' => 'Too many login attempts. Try again in :seconds seconds.',
+            ],
         ],
         'dashboard' => [
             'title' => 'Dashboard',
@@ -187,6 +198,7 @@ return [
             'owner' => 'Owner',
             'select_owner' => 'Select owner',
             'vault_key' => 'Vault key',
+            'show_vault_key' => 'Show',
             'name' => 'Name',
             'description_optional' => 'Description (optional)',
             'description_markdown' => 'Description (Markdown, optional)',

@@ -85,6 +85,88 @@ class AdminLoginAuditTest extends TestCase
         $this->assertSame('password', $auditLog?->metadata_json['auth_method'] ?? null);
     }
 
+    public function test_admin_login_throttles_repeated_failed_attempts(): void
+    {
+        config([
+            'cryptosik.throttle.admin_login.max_attempts' => 2,
+            'cryptosik.throttle.admin_login.decay_minutes' => 15,
+        ]);
+
+        Admin::query()->create([
+            'login' => 'root',
+            'password_hash' => Hash::make('super-secret-password'),
+            'is_active' => true,
+        ]);
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this
+                ->from(route('admin.login.show'))
+                ->post(route('admin.login.submit'), [
+                    'login' => 'root',
+                    'password' => 'wrong-password',
+                ], ['REMOTE_ADDR' => '127.0.0.1'])
+                ->assertSessionHasErrors('login');
+        }
+
+        $failedAuditLogs = AuditLog::query()->where('action', 'admin.login.failed')->count();
+
+        $throttled = $this
+            ->from(route('admin.login.show'))
+            ->post(route('admin.login.submit'), [
+                'login' => 'root',
+                'password' => 'super-secret-password',
+            ], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $throttled->assertRedirect(route('admin.login.show'));
+        $throttled->assertSessionHasErrors('login');
+        $throttled->assertSessionMissing(SessionKeys::ADMIN_ID);
+
+        $this->assertSame(
+            $failedAuditLogs,
+            AuditLog::query()->where('action', 'admin.login.failed')->count(),
+            'Throttled requests must not reach the credential check.',
+        );
+    }
+
+    public function test_admin_login_throttle_is_scoped_per_ip_and_cleared_on_success(): void
+    {
+        config([
+            'cryptosik.throttle.admin_login.max_attempts' => 2,
+            'cryptosik.throttle.admin_login.decay_minutes' => 15,
+        ]);
+
+        Admin::query()->create([
+            'login' => 'root',
+            'password_hash' => Hash::make('super-secret-password'),
+            'is_active' => true,
+        ]);
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this->post(route('admin.login.submit'), [
+                'login' => 'root',
+                'password' => 'wrong-password',
+            ], ['REMOTE_ADDR' => '127.0.0.1']);
+        }
+
+        $otherIp = $this->post(route('admin.login.submit'), [
+            'login' => 'root',
+            'password' => 'super-secret-password',
+        ], ['REMOTE_ADDR' => '127.0.0.2']);
+
+        $otherIp->assertRedirect(route('admin.dashboard'));
+
+        $sameIpAfterSuccess = $this->post(route('admin.login.submit'), [
+            'login' => 'root',
+            'password' => 'wrong-password',
+        ], ['REMOTE_ADDR' => '127.0.0.2']);
+
+        $sameIpAfterSuccess->assertSessionHasErrors('login');
+
+        $auditLog = AuditLog::query()->where('action', 'admin.login.failed')->latest('id')->first();
+
+        $this->assertNotNull($auditLog, 'A successful login must reset the counter for that IP.');
+    }
+
     public function test_admin_login_and_logout_do_not_clear_user_session(): void
     {
         $user = User::query()->create([

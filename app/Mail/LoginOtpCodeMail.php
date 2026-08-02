@@ -16,13 +16,13 @@ class LoginOtpCodeMail extends Mailable
     public function __construct(
         public readonly string $code,
         public readonly int $ttlMinutes,
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {
         return $this
             ->subject((string) __('messages.mail.login_otp.subject'))
-            ->view('emails.auth.login-otp');
+            ->view('emails.auth.login-otp')
+            ->text('emails.text.auth.login-otp');
     }
 }

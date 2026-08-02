@@ -79,4 +79,3 @@ Defined in `routes/console.php`:
 
 - `/up` - Laravel health check.
 - `/storage/{path}` - local file serving/upload route.
-- `/livewire-*/*` - Livewire asset/update routes.

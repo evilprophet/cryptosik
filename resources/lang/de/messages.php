@@ -34,6 +34,7 @@ return [
             'otp' => 'OTP (6 Ziffern)',
             'verify_continue' => 'Tresor Oeffnen',
             'change_email' => 'Andere E-Mail',
+            'change_language' => 'Sprache ändern',
             'dev_mode_code' => 'OTP im Dev-Modus: :code',
             'status' => [
                 'code_issued' => 'Falls das Konto existiert, wurde ein Login-Code erstellt.',
@@ -42,6 +43,8 @@ return [
                 'restart_login' => 'Starte den Login neu und gib deine E-Mail erneut ein.',
                 'invalid_code' => 'Ungueltiger oder abgelaufener Login-Code.',
                 'delivery_failed' => 'Der Login-Code konnte nicht gesendet werden. Bitte versuche es erneut.',
+                'too_many_requests' => 'Zu viele Code-Anfragen. Versuche es in :seconds Sekunden erneut.',
+                'too_many_attempts' => 'Zu viele Verifizierungsversuche. Versuche es in :seconds Sekunden erneut.',
             ],
         ],
         'vault_unlock' => [
@@ -51,6 +54,7 @@ return [
             'unlock' => 'Tresor entsperren',
             'errors' => [
                 'invalid_key' => 'Ungültiger Tresor-Schlüssel oder kein Zugriff auf diesen Tresor.',
+                'too_many_attempts' => 'Zu viele Entsperrversuche. Versuche es in :seconds Sekunden erneut.',
             ],
         ],
     ],
@@ -118,6 +122,10 @@ return [
         'errors' => [
             'readonly' => 'Dieser Tresor ist schreibgeschützt.',
             'attachment_type_not_allowed' => 'Nicht unterstützter Anhangstyp. Erlaubte Formate: txt, md, pdf, odt, ods, odp, doc, docx, xls, xlsx, png, jpg, jpeg, webp.',
+            'duplicate_vault_key' => 'Dieser Tresor-Schlüssel wird bereits verwendet. Wähle einen anderen.',
+            'attachment_limit_reached' => 'Anhangslimit für diesen Entwurf erreicht.',
+            'draft_not_found' => 'Es gibt keinen Entwurf zum Abschließen.',
+            'crypto_failure' => 'Verschlüsselte Daten konnten nicht verarbeitet werden. Entsperren Sie den Tresor erneut und versuchen Sie es noch einmal.',
             'attachment_not_found' => 'Anhang im Entwurf nicht gefunden.',
             'owner_only_description' => 'Nur der Tresor-Owner kann die Beschreibung aktualisieren.',
             'title_required' => 'Der Tresor-Titel ist erforderlich.',
@@ -135,6 +143,9 @@ return [
             'login' => 'Login',
             'password' => 'Passwort',
             'sign_in' => 'Anmelden',
+            'errors' => [
+                'too_many_attempts' => 'Zu viele Anmeldeversuche. Versuche es in :seconds Sekunden erneut.',
+            ],
         ],
         'dashboard' => [
             'users' => 'Benutzer',
@@ -172,6 +183,7 @@ return [
             'owner' => 'Owner',
             'select_owner' => 'Owner auswählen',
             'vault_key' => 'Tresor-Schlüssel',
+            'show_vault_key' => 'Anzeigen',
             'name' => 'Name',
             'description_optional' => 'Beschreibung (optional)',
             'description_markdown' => 'Beschreibung (Markdown, optional)',

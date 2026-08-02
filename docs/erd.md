@@ -85,12 +85,10 @@ erDiagram
 
     vault_crypto {
         uuid vault_id PK,FK
-        string vault_locator UK
         string kdf_salt
         json kdf_params
         text wrapped_data_key
         string wrap_nonce
-        string key_fingerprint
         timestamp created_at
         timestamp updated_at
     }
@@ -197,7 +195,7 @@ erDiagram
 - `entries (vault_id, sequence_no)` is unique.
 - `entries (vault_id, entry_hash)` is unique.
 - `entry_reads (entry_id, user_id)` is unique.
-- `vault_crypto.vault_locator` is unique and used for vault lookup by key.
+- Unlock resolves a vault by trying to unwrap `wrapped_data_key` for each vault the user belongs to; no derived index of the vault key is stored.
 
 ## Security Notes
 - Encrypted text fields store ciphertext+nonce as JSON envelopes.

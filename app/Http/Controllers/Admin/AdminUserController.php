@@ -7,10 +7,8 @@ namespace EvilStudio\Cryptosik\Http\Controllers\Admin;
 use EvilStudio\Cryptosik\Http\Controllers\Controller;
 use EvilStudio\Cryptosik\Http\Requests\CreateUserRequest;
 use EvilStudio\Cryptosik\Http\Requests\UpdateUserNicknameRequest;
-use EvilStudio\Cryptosik\Models\Admin;
 use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Services\Audit\AuditLogService;
-use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
@@ -18,9 +16,7 @@ class AdminUserController extends Controller
 {
     private const PAGE_SIZE = 50;
 
-    public function __construct(private readonly AuditLogService $auditLogService)
-    {
-    }
+    public function __construct(private readonly AuditLogService $auditLogService) {}
 
     public function index(): View
     {
@@ -36,7 +32,7 @@ class AdminUserController extends Controller
         $supportedLocales = (array) config('cryptosik.locales', ['en']);
         $defaultLocale = (string) config('app.locale', 'en');
 
-        if (!in_array($defaultLocale, $supportedLocales, true)) {
+        if (! in_array($defaultLocale, $supportedLocales, true)) {
             $defaultLocale = (string) ($supportedLocales[0] ?? 'en');
         }
 
@@ -48,7 +44,7 @@ class AdminUserController extends Controller
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
 
-        $admin = $this->resolveAdmin($request->session()->get(SessionKeys::ADMIN_ID));
+        $admin = $this->currentAdmin($request);
 
         if ($admin !== null) {
             $this->auditLogService->adminUserCreated($admin, $user);
@@ -78,7 +74,7 @@ class AdminUserController extends Controller
 
     public function deactivate(User $user): RedirectResponse
     {
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             return back()->with('status', __('messages.admin.users.status.already_inactive', ['email' => $user->email]));
         }
 
@@ -98,14 +94,5 @@ class AdminUserController extends Controller
         $user->save();
 
         return back()->with('status', __('messages.admin.users.status.activated', ['email' => $user->email]));
-    }
-
-    private function resolveAdmin(mixed $adminId): ?Admin
-    {
-        if (!is_numeric($adminId)) {
-            return null;
-        }
-
-        return Admin::query()->find((int) $adminId);
     }
 }

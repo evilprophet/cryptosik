@@ -11,6 +11,8 @@ class PruneAuditLogsCommand extends Command
 {
     private const RETENTION_NEVER = 'never';
 
+    private const DELETE_CHUNK_SIZE = 1000;
+
     private const ALLOWED_RETENTION_DAYS = [
         30,
         60,
@@ -32,21 +34,64 @@ class PruneAuditLogsCommand extends Command
             return self::SUCCESS;
         }
 
-        $retentionDays = (int) $retention;
-
-        if (!in_array($retentionDays, self::ALLOWED_RETENTION_DAYS, true)) {
+        if (! is_numeric($retention)) {
             $this->error('Invalid audit log retention. Allowed values: never, 30, 60, 90, 120.');
 
             return self::FAILURE;
         }
 
-        $deletedCount = AuditLog::query()
-            ->where('created_at', '<', now()->subDays($retentionDays))
-            ->delete();
+        $retentionDays = (int) $retention;
+
+        if (! in_array($retentionDays, self::ALLOWED_RETENTION_DAYS, true)) {
+            $narrowed = $this->narrowRetention($retentionDays);
+
+            $this->warn(sprintf(
+                'Retention %d is not one of %s; using %d instead.',
+                $retentionDays,
+                implode(', ', self::ALLOWED_RETENTION_DAYS),
+                $narrowed,
+            ));
+
+            $retentionDays = $narrowed;
+        }
+
+        $deletedCount = $this->pruneInChunks(now()->subDays($retentionDays));
 
         $this->info(sprintf('Audit log pruning completed: %d deleted.', $deletedCount));
 
         return self::SUCCESS;
+    }
+
+    // Chunked so each write lock on the SQLite file stays short.
+    private function pruneInChunks(\DateTimeInterface $olderThan): int
+    {
+        $deletedCount = 0;
+
+        do {
+            $deleted = AuditLog::query()
+                ->where('created_at', '<', $olderThan)
+                ->limit(self::DELETE_CHUNK_SIZE)
+                ->delete();
+
+            $deletedCount += $deleted;
+        } while ($deleted > 0);
+
+        return $deletedCount;
+    }
+
+    // Ties resolve to the longer retention, so narrowing never deletes more than asked.
+    private function narrowRetention(int $requestedDays): int
+    {
+        $allowed = self::ALLOWED_RETENTION_DAYS;
+        $best = $allowed[count($allowed) - 1];
+
+        foreach ($allowed as $candidate) {
+            if (abs($candidate - $requestedDays) <= abs($best - $requestedDays)) {
+                $best = $candidate;
+            }
+        }
+
+        return $best;
     }
 
     private function resolveRetention(): string

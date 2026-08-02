@@ -46,7 +46,7 @@ For stack details, see [docs/tech-stack.md](docs/tech-stack.md).
 
 - Docker and Docker Compose (for Docker-only flow)
 - PHP `8.3+` and Composer `2+` (for local development)
-- Node.js `20+` and npm (for local frontend assets)
+- Node.js `20.19+` or `22.12+` and npm (Vite 8 engine requirement, for local frontend assets)
 - SQLite or MySQL (for local development)
 - `ext-sodium` (libsodium)
 - SMTP server for OTP and notification emails in `APP_MODE=prod`
@@ -66,24 +66,33 @@ curl -L -o docker-compose.yml https://raw.githubusercontent.com/evilprophet/cryp
 curl -L -o .env https://raw.githubusercontent.com/evilprophet/cryptosik/main/.env.example
 ```
 
-#### 2. Update `.env`
+#### 2. Generate the application key
+
+The container refuses to start with an empty `APP_KEY`.
+
+```bash
+docker compose run --rm app php artisan key:generate --show
+```
+
+Copy the printed value (including the `base64:` prefix) into `APP_KEY=` in `.env`.
+
+#### 3. Update `.env`
 
 Set at minimum:
-- `APP_KEY`
-- `CRYPTOSIK_LOOKUP_PEPPER`
-- `CRYPTOSIK_LOOKUP_SALT`
-- `APP_MODE` (`dev` or `prod`)
+- `APP_KEY` (from the step above)
 
-If you run in `prod`, also configure `MAIL_*` variables.
+`.env.example` ships production-safe defaults (`APP_MODE=prod`, `APP_ENV=production`, `APP_DEBUG=false`), so a production deployment needs no changes there. In `prod` mode login codes are emailed, so `MAIL_*` must be configured.
 
-#### 3. Start container
+To run the instance in dev mode instead (fixed OTP code shown on the login page, no email needed) set both `APP_MODE=dev` and `APP_ENV=local` - dev mode is ignored while `APP_ENV=production`. Local development also runs over plain HTTP, where a `Secure` cookie is never sent back, so set `SESSION_SECURE_COOKIE=false` as well.
+
+#### 4. Start container
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-#### 4. Open application
+#### 5. Open application
 
 Open: `http://localhost:8080`
 
@@ -114,9 +123,14 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Also set required secrets:
-- `CRYPTOSIK_LOOKUP_PEPPER`
-- `CRYPTOSIK_LOOKUP_SALT`
+For local work switch the runtime values to their development counterparts (the block is marked in `.env.example`):
+
+```dotenv
+APP_MODE=dev
+APP_ENV=local
+APP_DEBUG=true
+SESSION_SECURE_COOKIE=false
+```
 
 #### 3. Prepare local database and run migrations
 
@@ -145,23 +159,36 @@ Seeded defaults after `--seed`:
 
 Required security variables (must not stay as placeholders):
 
-- `CRYPTOSIK_LOOKUP_PEPPER`
-- `CRYPTOSIK_LOOKUP_SALT`
 - `APP_KEY`
+
+`APP_KEY` protects more than cookies here. While a vault is unlocked, its decrypted data key lives in the session, and with the default file session driver that session is written to `storage/framework/sessions` - encrypted with `APP_KEY`, because `SESSION_ENCRYPT` defaults to `true`. The trust boundary is therefore: whoever holds both the session files and `APP_KEY` holds the data keys of every vault unlocked at that moment. Keep `APP_KEY` out of backups that also contain `storage/`, and do not set `SESSION_ENCRYPT=false`.
 
 Important runtime variables:
 
-- `APP_MODE` (`dev` or `prod`)
+- `APP_MODE` (`dev` or `prod`) - `dev` additionally requires `APP_ENV` to be something other than `production`, otherwise the fixed OTP code stays disabled
+- `APP_ENV` (`production` for a real deployment) and `APP_DEBUG` (`false`)
+- `SESSION_SECURE_COOKIE` (defaults to `true`; set `false` only when the app is reached over plain HTTP)
 - `TRUSTED_PROXIES` (set when running behind reverse proxy, for example `REMOTE_ADDR`)
 - `CRYPTOSIK_DEV_OTP_CODE`
 - `CRYPTOSIK_ADMIN_PATH`
 - `CRYPTOSIK_NOTIFICATIONS_WEEKLY_UNREAD_CRON` (default `0 9 * * 6`)
+- `CRYPTOSIK_CHAIN_VERIFY_EVERY_HOURS` (default `3`, clamped to `1`-`23`)
 - `DB_CONNECTION` (`sqlite` or `mysql`)
 - `MAIL_*` (required for OTP and notification delivery in `prod`)
 - `CRYPTOSIK_ATTACHMENTS_PER_ENTRY_LIMIT`
 - `CRYPTOSIK_ATTACHMENT_SIZE_LIMIT_BYTES`
 - `CRYPTOSIK_ENTRY_CONTENT_CHARS_LIMIT`
 - `CRYPTOSIK_USER_NICKNAME_CHARS_LIMIT`
+
+## 💾 Backup
+
+All state lives in `./data`. The SQLite database runs in WAL mode, so it is `database.sqlite` plus `-wal` and `-shm` side files - copying only the main file while the app is running can lose the most recent commits. Either stop the containers before copying `./data`, or take a consistent snapshot without stopping anything:
+
+```bash
+docker compose exec app php -r '(new PDO("sqlite:/var/www/html/data/database/database.sqlite"))->exec("VACUUM INTO \"/var/www/html/data/backup.sqlite\"");'
+```
+
+That writes a single self-contained `data/backup.sqlite` with the WAL already folded in. It uses the PDO driver the image already ships, so no extra package is needed. Restore by putting `./data` back in place and starting the stack.
 
 ## 🧭 How It Works
 
@@ -181,14 +208,14 @@ Important runtime variables:
 
 ### Custom Artisan commands
 
-| Command                                                             | Description                                             |
-|---------------------------------------------------------------------|---------------------------------------------------------|
-| `php artisan cryptosik:admin-create {login} {password?}`            | Create an admin account.                                |
-| `php artisan cryptosik:export-vault {vault_id} {output_path}`       | Export encrypted vault data to JSONL.                   |
-| `php artisan cryptosik:verify-chains {--vault=}`                    | Verify hash-chain integrity for active/archived vaults. |
-| `php artisan cryptosik:otp-prune {--dry-run}`                       | Delete obsolete OTP records (consumed/expired).         |
-| `php artisan cryptosik:notifications:weekly-unread {--per-vault=5}` | Send weekly unread digest notifications.                |
-| `php artisan cryptosik:audit-logs-prune {--retention=30}`           | Prune audit logs using configured or overridden retention. |
+| Command                                                             | Description                                                |
+|---------------------------------------------------------------------|------------------------------------------------------------|
+| `php artisan cryptosik:admin-create {login} {password?}`            | Create an admin account.                                   |
+| `php artisan cryptosik:export-vault {vault_id} {output_path}`       | Export encrypted vault data to JSONL.                      |
+| `php artisan cryptosik:verify-chains {--vault=}`                    | Verify hash-chain integrity for active/archived vaults.    |
+| `php artisan cryptosik:otp-prune {--dry-run}`                       | Delete obsolete OTP records (consumed/expired).            |
+| `php artisan cryptosik:notifications:weekly-unread {--per-vault=5}` | Send weekly unread digest notifications.                   |
+| `php artisan cryptosik:audit-logs-prune {--retention=}`             | Prune audit logs using configured or overridden retention. |
 
 ### Common development commands
 
@@ -204,9 +231,9 @@ Important runtime variables:
 
 ## 🧪 Testing & Quality
 
-Latest local verification (2026-04-19):
+Latest local verification (2026-08-02):
 - `php artisan test`
-- Result: `59 passed` (`403 assertions`)
+- Result: `151 passed` (`805 assertions`)
 
 CI:
 - `.gitlab-ci.yml` runs unit and integration tests.

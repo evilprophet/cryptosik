@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace EvilStudio\Cryptosik\Services\Vault;
 
+use Carbon\CarbonImmutable;
+use EvilStudio\Cryptosik\Exceptions\AttachmentLimitReachedException;
+use EvilStudio\Cryptosik\Exceptions\DraftNotFoundException;
 use EvilStudio\Cryptosik\Models\DraftAttachment;
 use EvilStudio\Cryptosik\Models\Entry;
 use EvilStudio\Cryptosik\Models\EntryAttachment;
@@ -13,10 +16,8 @@ use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Models\VaultChainState;
 use EvilStudio\Cryptosik\Services\Crypto\CryptoService;
 use EvilStudio\Cryptosik\Services\Integrity\EntryHashService;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class EntryService
 {
@@ -25,8 +26,7 @@ class EntryService
     public function __construct(
         private readonly CryptoService $cryptoService,
         private readonly EntryHashService $entryHashService,
-    ) {
-    }
+    ) {}
 
     public function upsertDraft(User $user, Vault $vault, string $dataKey, string $entryDate, string $title, string $content): EntryDraft
     {
@@ -69,22 +69,25 @@ class EntryService
             'content_enc' => $this->cryptoService->encryptEnvelope('', $dataKey),
         ]);
 
-        $currentCount = $draft->attachments()->count();
-        $maxCount = (int) config('cryptosik.limits.attachments_per_entry');
-
-        if ($currentCount >= $maxCount) {
-            throw new RuntimeException('Attachment limit reached for this draft.');
-        }
-
         $encryptedBinary = $this->cryptoService->encryptWithDataKey(file_get_contents($file->getRealPath()) ?: '', $dataKey);
 
-        return $draft->attachments()->create([
-            'filename_enc' => $this->cryptoService->encryptEnvelope($file->getClientOriginalName(), $dataKey),
-            'mime_enc' => $this->cryptoService->encryptEnvelope($file->getMimeType() ?? 'application/octet-stream', $dataKey),
-            'size_bytes' => $file->getSize(),
-            'blob_enc' => $encryptedBinary['ciphertext'],
-            'blob_nonce' => $encryptedBinary['nonce'],
-        ]);
+        // Insert then check inside the transaction: the throw rolls the row back, so two
+        // concurrent uploads cannot both see room for one more.
+        return DB::transaction(function () use ($draft, $file, $encryptedBinary, $dataKey): DraftAttachment {
+            $attachment = $draft->attachments()->create([
+                'filename_enc' => $this->cryptoService->encryptEnvelope($file->getClientOriginalName(), $dataKey),
+                'mime_enc' => $this->cryptoService->encryptEnvelope($file->getMimeType() ?? 'application/octet-stream', $dataKey),
+                'size_bytes' => $file->getSize(),
+                'blob_enc' => $encryptedBinary['ciphertext'],
+                'blob_nonce' => $encryptedBinary['nonce'],
+            ]);
+
+            if ($draft->attachments()->count() > (int) config('cryptosik.limits.attachments_per_entry')) {
+                throw AttachmentLimitReachedException::make();
+            }
+
+            return $attachment;
+        });
     }
 
     public function removeDraftAttachment(User $user, Vault $vault, int $attachmentId): bool
@@ -119,7 +122,7 @@ class EntryService
                 ->first();
 
             if ($draft === null) {
-                throw new RuntimeException('No draft found to finalize.');
+                throw DraftNotFoundException::make();
             }
 
             $chainState = VaultChainState::query()->lockForUpdate()->find($vault->id);
@@ -138,6 +141,11 @@ class EntryService
             $entryDate = $draft->entry_date?->toDateString() ?? CarbonImmutable::now()->toDateString();
 
             $attachmentBlobPayloads = $draft->attachments()->orderBy('id')->pluck('blob_enc')->all();
+
+            if (count($attachmentBlobPayloads) > (int) config('cryptosik.limits.attachments_per_entry')) {
+                throw AttachmentLimitReachedException::make();
+            }
+
             $attachmentHash = $this->entryHashService->makeAttachmentHash($attachmentBlobPayloads);
 
             $entryHash = $this->entryHashService->makeEntryHash(
@@ -165,7 +173,8 @@ class EntryService
                 'finalized_at' => $finalizedAt,
             ]);
 
-            $draftAttachments = $draft->attachments()->get();
+            // Same order as the hash above - these ids decide the verifier's order later.
+            $draftAttachments = $draft->attachments()->orderBy('id')->get();
 
             foreach ($draftAttachments as $draftAttachment) {
                 EntryAttachment::query()->create([

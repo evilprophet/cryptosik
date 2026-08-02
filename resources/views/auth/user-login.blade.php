@@ -1,4 +1,4 @@
-@php($pendingEmail = session('auth.pending_email'))
+@php($pendingEmail = session(\EvilStudio\Cryptosik\Support\SessionKeys::PENDING_EMAIL))
 @php($supportedLocales = (array) config('cryptosik.locales', ['en']))
 @php($hasViteHot = file_exists(public_path('hot')))
 @php($hasViteManifest = file_exists(public_path('build/manifest.json')))
@@ -99,14 +99,26 @@
         <form method="post" action="{{ route('locale.update') }}" class="mt-6 border-t border-base-300 pt-4">
             @csrf
             <label class="block text-center text-xs uppercase tracking-wide text-base-content/60">{{ __('messages.auth.user_login.language') }}</label>
-            <select name="locale" onchange="this.form.submit()" class="mx-auto mt-2 block w-1/4 min-w-[120px] rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content">
+            <select name="locale" data-locale-autosubmit class="mx-auto mt-2 block w-1/4 min-w-[120px] rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content">
                 @foreach ($supportedLocales as $locale)
                     <option value="{{ $locale }}" @selected(app()->getLocale() === $locale)>
                         {{ __('messages.locales.'.$locale) }}
                     </option>
                 @endforeach
             </select>
+
+            <noscript>
+                <button type="submit" class="mx-auto mt-2 block rounded-md border border-base-300 bg-base-300 px-3 py-2 text-sm text-base-content">
+                    {{ __('messages.auth.user_login.change_language') }}
+                </button>
+            </noscript>
         </form>
+
+        <script>
+            document.querySelectorAll('[data-locale-autosubmit]').forEach((select) => {
+                select.addEventListener('change', () => select.form.submit());
+            });
+        </script>
     </section>
 </main>
 </body>

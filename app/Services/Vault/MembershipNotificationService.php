@@ -18,8 +18,7 @@ class MembershipNotificationService
 {
     public function __construct(
         private readonly AuditLogService $auditLogService,
-    ) {
-    }
+    ) {}
 
     public function skipNotification(Admin $admin, Vault $vault, User $user): void
     {
@@ -58,4 +57,3 @@ class MembershipNotificationService
         }
     }
 }
-

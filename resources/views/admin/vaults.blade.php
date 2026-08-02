@@ -158,7 +158,10 @@
 
                 <label class="block text-sm">
                     <span class="mb-1 block font-medium text-base-content/90">{{ __('messages.admin.vaults.vault_key') }}</span>
-                    <input type="text" name="vault_key" required value="{{ old('vault_key') }}" class="w-full rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content" />
+                    <span class="flex gap-2">
+                        <input type="password" name="vault_key" required value="{{ old('vault_key') }}" autocomplete="new-password" spellcheck="false" data-vault-key-input class="w-full rounded-md border border-base-300 bg-base-100 px-3 py-2 text-base-content" />
+                        <button type="button" data-toggle-vault-key class="shrink-0 rounded-md border border-base-300 bg-base-300 px-3 py-2 text-sm text-base-content hover:opacity-90">{{ __('messages.admin.vaults.show_vault_key') }}</button>
+                    </span>
                 </label>
 
                 <label class="block text-sm">

@@ -15,8 +15,7 @@ class WeeklyUnreadDigestService
     public function __construct(
         private readonly UnreadEntryService $unreadEntryService,
         private readonly AuditLogService $auditLogService,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{sent:int, skipped:int, failed:int}
@@ -31,6 +30,7 @@ class WeeklyUnreadDigestService
 
         $users = User::query()
             ->where('is_active', true)
+            ->where('notifications_enabled', true)
             ->whereHas('memberships.vault')
             ->get(['id', 'email', 'locale']);
 
@@ -63,4 +63,3 @@ class WeeklyUnreadDigestService
         return $stats;
     }
 }
-

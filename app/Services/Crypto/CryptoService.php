@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace EvilStudio\Cryptosik\Services\Crypto;
 
+use EvilStudio\Cryptosik\Exceptions\CryptoOperationException;
 use JsonException;
-use RuntimeException;
 
 class CryptoService
 {
@@ -38,7 +38,7 @@ class CryptoService
         $plaintext = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt($ciphertext, '', $nonce, $key);
 
         if ($plaintext === false) {
-            throw new RuntimeException('Unable to decrypt payload with provided data key.');
+            throw new CryptoOperationException('Unable to decrypt payload with provided data key.');
         }
 
         return $plaintext;
@@ -51,7 +51,7 @@ class CryptoService
         try {
             return json_encode($payload, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
-            throw new RuntimeException('Unable to encode encrypted payload.', previous: $exception);
+            throw new CryptoOperationException('Unable to encode encrypted payload.', previous: $exception);
         }
     }
 
@@ -60,11 +60,11 @@ class CryptoService
         try {
             $payload = json_decode($encryptedPayload, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
-            throw new RuntimeException('Invalid encrypted payload JSON.', previous: $exception);
+            throw new CryptoOperationException('Invalid encrypted payload JSON.', previous: $exception);
         }
 
-        if (!isset($payload['ciphertext'], $payload['nonce'])) {
-            throw new RuntimeException('Encrypted payload must include ciphertext and nonce.');
+        if (! isset($payload['ciphertext'], $payload['nonce'])) {
+            throw new CryptoOperationException('Encrypted payload must include ciphertext and nonce.');
         }
 
         return $this->decryptWithDataKey($payload['ciphertext'], $payload['nonce'], $dataKeyB64);
@@ -80,11 +80,19 @@ class CryptoService
         return $this->decryptWithDataKey($wrappedKeyB64, $nonceB64, $wrappingKeyB64);
     }
 
-    public function deriveWrappingKey(string $vaultKey, string $saltB64): string
-    {
+    /**
+     * Unwrapping an existing vault must pass that vault's stored kdf_params - Argon2id only
+     * repeats for an identical (vaultKey, salt, opslimit, memlimit) tuple.
+     */
+    public function deriveWrappingKey(
+        string $vaultKey,
+        string $saltB64,
+        ?int $opslimit = null,
+        ?int $memlimit = null,
+    ): string {
         $salt = $this->decodeBase64($saltB64, 'kdf salt');
-        $opslimit = (int) config('cryptosik.crypto.argon_opslimit');
-        $memlimit = (int) config('cryptosik.crypto.argon_memlimit');
+        $opslimit ??= (int) config('cryptosik.crypto.argon_opslimit');
+        $memlimit ??= (int) config('cryptosik.crypto.argon_memlimit');
 
         $raw = sodium_crypto_pwhash(
             SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES,
@@ -95,7 +103,13 @@ class CryptoService
             SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13,
         );
 
-        return base64_encode($raw);
+        $encoded = base64_encode($raw);
+
+        // Best effort: PHP copies strings, so this clears one buffer, not every trace.
+        sodium_memzero($raw);
+        sodium_memzero($salt);
+
+        return $encoded;
     }
 
     public function generateSalt(): string
@@ -108,7 +122,7 @@ class CryptoService
         $decoded = base64_decode($input, true);
 
         if ($decoded === false) {
-            throw new RuntimeException(sprintf('Invalid base64 payload for %s.', $label));
+            throw new CryptoOperationException(sprintf('Invalid base64 payload for %s.', $label));
         }
 
         return $decoded;

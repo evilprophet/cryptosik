@@ -25,7 +25,7 @@ Acceptance criteria:
 ### US-003 - Unlock vault with vault key
 As a user, I want to unlock a vault using a vault key so I can access my workspace.
 Acceptance criteria:
-1. Vault is looked up by derived key locator.
+1. Vault is resolved by trial-unwrapping the data key of each vault the user belongs to.
 2. Access is granted only when user is a vault member.
 3. Soft-deleted vaults cannot be unlocked.
 4. Invalid key and no-access cases return a generic denial.

@@ -11,14 +11,14 @@ class EntryHashServiceTest extends TestCase
 {
     public function test_attachment_hash_is_null_for_empty_payload(): void
     {
-        $service = new EntryHashService();
+        $service = new EntryHashService;
 
         $this->assertNull($service->makeAttachmentHash([]));
     }
 
     public function test_attachment_hash_is_stable_for_same_payload(): void
     {
-        $service = new EntryHashService();
+        $service = new EntryHashService;
         $payload = ['blob-a', 'blob-b'];
 
         $first = $service->makeAttachmentHash($payload);
@@ -29,7 +29,7 @@ class EntryHashServiceTest extends TestCase
 
     public function test_entry_hash_changes_when_payload_changes(): void
     {
-        $service = new EntryHashService();
+        $service = new EntryHashService;
 
         $base = $service->makeEntryHash(
             sequenceNo: 1,

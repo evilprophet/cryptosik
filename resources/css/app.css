@@ -1,4 +1,7 @@
-@import 'tailwindcss';
+/* source(none): only the @source globs below decide what is generated. Without it the scan
+   reaches PHP outside resources/ and turns ->select(), $label etc. into daisyUI CSS, so the
+   local build differs from the one produced inside the Docker frontend stage. */
+@import 'tailwindcss' source(none);
 @plugin "daisyui" {
     themes: false;
 }
@@ -37,8 +40,6 @@
     --noise: 1;
 }
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
@@ -486,12 +487,16 @@
         color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-base-200) 22%);
     }
 
+    /* Cut out of the local 61x61 emoji-mart spritesheet; JS sets background-position. */
     .emoji-glyph {
         display: inline-block;
         width: 1.15em;
         height: 1.15em;
         margin: 0 0.02em;
         vertical-align: -0.2em;
+        background-image: url('/vendor/emoji-mart/sheets/google-64.png');
+        background-size: 6100% 6100%;
+        background-repeat: no-repeat;
     }
 
     .emoji-picker-popover {

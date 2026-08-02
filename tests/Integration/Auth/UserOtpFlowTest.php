@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Integration\Auth;
 
 use EvilStudio\Cryptosik\Mail\LoginOtpCodeMail;
-use EvilStudio\Cryptosik\Models\AuthLoginCode;
 use EvilStudio\Cryptosik\Models\AuditLog;
+use EvilStudio\Cryptosik\Models\AuthLoginCode;
 use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -75,6 +75,7 @@ class UserOtpFlowTest extends TestCase
 
         $this->assertDatabaseCount('auth_login_codes', 0);
     }
+
     public function test_production_mode_sends_login_code_email(): void
     {
         config([
@@ -107,6 +108,43 @@ class UserOtpFlowTest extends TestCase
             'email' => 'member@example.com',
             'ip_address' => '127.0.0.1',
         ]);
+    }
+
+    public function test_dev_otp_mode_is_ignored_on_a_production_environment(): void
+    {
+        config([
+            'app.mode' => 'dev',
+            'app.env' => 'production',
+            'cryptosik.otp.dev_code' => 'dev-sentinel-code',
+        ]);
+
+        Mail::fake();
+
+        User::query()->create([
+            'email' => 'member@example.com',
+            'nickname' => 'member',
+            'locale' => 'en',
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->from('/login')
+            ->post('/login/request-code', ['email' => 'member@example.com'], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $response->assertRedirect('/login');
+        $response->assertSessionMissing('dev_code');
+
+        Mail::assertSent(LoginOtpCodeMail::class);
+
+        $verify = $this
+            ->from('/login')
+            ->post('/login/verify-code', [
+                'email' => 'member@example.com',
+                'code' => (string) config('cryptosik.otp.dev_code'),
+            ], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $verify->assertSessionHasErrors('code');
+        $verify->assertSessionMissing(SessionKeys::USER_ID);
     }
 
     public function test_login_page_switches_to_otp_step_after_requesting_code(): void
@@ -207,6 +245,40 @@ class UserOtpFlowTest extends TestCase
         $logoutResponse->assertSessionHas(SessionKeys::ADMIN_ID, 10);
     }
 
+    /**
+     * Logout rotates the session id via regenerate(true). That rotation itself is not
+     * observable here - the array session driver hands out a fresh id on every test request
+     * either way - so this asserts the part that a wrong implementation would break:
+     * invalidate() would rotate the id too, but would also wipe the admin session.
+     */
+    public function test_logout_clears_user_keys_without_destroying_a_parallel_admin_session(): void
+    {
+        $user = User::query()->create([
+            'email' => 'member@example.com',
+            'nickname' => 'member',
+            'locale' => 'en',
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->withSession([
+                SessionKeys::USER_ID => $user->id,
+                SessionKeys::USER_EMAIL => $user->email,
+                SessionKeys::UNLOCKED_VAULT_ID => 'some-vault-id',
+                SessionKeys::UNLOCKED_VAULT_KEY => 'some-data-key',
+                SessionKeys::ADMIN_ID => 10,
+                SessionKeys::ADMIN_LOGIN => 'root',
+            ])
+            ->post(route('auth.user.logout'));
+
+        $response->assertRedirect(route('auth.user.login.show'));
+
+        $response->assertSessionMissing(SessionKeys::USER_ID);
+        $response->assertSessionMissing(SessionKeys::UNLOCKED_VAULT_KEY);
+        $response->assertSessionHas(SessionKeys::ADMIN_ID, 10);
+        $response->assertSessionHas(SessionKeys::ADMIN_LOGIN, 'root');
+    }
+
     public function test_verify_code_failure_creates_failed_audit_log(): void
     {
         User::query()->create([
@@ -258,6 +330,116 @@ class UserOtpFlowTest extends TestCase
         $auditLog = AuditLog::query()->where('action', 'user.login.failed')->latest('id')->first();
 
         $this->assertNotNull($auditLog);
+    }
+
+    public function test_request_code_rejects_an_email_longer_than_the_database_column(): void
+    {
+        // Valid RFC syntax, 262 characters - the users.email column holds 255.
+        $tooLong = str_repeat('a', 250).'@example.com';
+
+        $response = $this
+            ->from('/login')
+            ->post('/login/request-code', ['email' => $tooLong], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertDatabaseCount('auth_login_codes', 0);
+    }
+
+    public function test_verify_rate_limit_blocks_excessive_verification_attempts(): void
+    {
+        config([
+            'cryptosik.throttle.otp_verify.max_attempts' => 2,
+            'cryptosik.throttle.otp_verify.decay_minutes' => 15,
+        ]);
+
+        User::query()->create([
+            'email' => 'member@example.com',
+            'nickname' => 'member',
+            'locale' => 'en',
+            'is_active' => true,
+        ]);
+
+        $this->post('/login/request-code', ['email' => 'member@example.com'], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this
+                ->from('/login')
+                ->post('/login/verify-code', [
+                    'email' => 'member@example.com',
+                    'code' => '000000',
+                ], ['REMOTE_ADDR' => '127.0.0.1'])
+                ->assertSessionHasErrors('code');
+        }
+
+        $failedAuditLogs = AuditLog::query()->where('action', 'user.login.failed')->count();
+
+        $throttled = $this
+            ->from('/login')
+            ->post('/login/verify-code', [
+                'email' => 'member@example.com',
+                'code' => (string) config('cryptosik.otp.dev_code'),
+            ], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $throttled->assertRedirect('/login');
+        $throttled->assertSessionHasErrors('code');
+        $throttled->assertSessionMissing(SessionKeys::USER_ID);
+
+        $this->assertSame(
+            $failedAuditLogs,
+            AuditLog::query()->where('action', 'user.login.failed')->count(),
+            'Throttled requests must not reach the code check.',
+        );
+
+        $codeRecord = AuthLoginCode::query()->latest('id')->first();
+
+        $this->assertNull($codeRecord?->consumed_at);
+    }
+
+    public function test_repeated_wrong_codes_increment_attempts_and_lock_the_code(): void
+    {
+        config([
+            'cryptosik.otp.max_attempts' => 3,
+            'cryptosik.otp.lock_minutes' => 15,
+            'cryptosik.throttle.otp_verify.max_attempts' => 50,
+        ]);
+
+        User::query()->create([
+            'email' => 'member@example.com',
+            'nickname' => 'member',
+            'locale' => 'en',
+            'is_active' => true,
+        ]);
+
+        $this->post('/login/request-code', ['email' => 'member@example.com'], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $this
+                ->from('/login')
+                ->post('/login/verify-code', [
+                    'email' => 'member@example.com',
+                    'code' => '000000',
+                ], ['REMOTE_ADDR' => '127.0.0.1'])
+                ->assertSessionHasErrors('code');
+
+            $this->assertSame($attempt, AuthLoginCode::query()->latest('id')->first()?->attempts);
+        }
+
+        $codeRecord = AuthLoginCode::query()->latest('id')->first();
+
+        $this->assertNotNull($codeRecord?->blocked_until);
+        $this->assertTrue($codeRecord?->blocked_until?->isFuture() ?? false);
+
+        $lockedOut = $this
+            ->from('/login')
+            ->post('/login/verify-code', [
+                'email' => 'member@example.com',
+                'code' => (string) config('cryptosik.otp.dev_code'),
+            ], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $lockedOut->assertSessionHasErrors('code');
+        $lockedOut->assertSessionMissing(SessionKeys::USER_ID);
+
+        $this->assertSame(3, AuthLoginCode::query()->latest('id')->first()?->attempts);
     }
 
     public function test_request_rate_limit_blocks_excessive_code_issues(): void

@@ -117,4 +117,3 @@ class UnreadEntryServiceTest extends TestCase
         ]);
     }
 }
-

@@ -14,13 +14,12 @@ class WeeklyUnreadDigestMail extends Mailable
     use SerializesModels;
 
     /**
-     * @param list<array{vault_id:string, unread_count:int, entries:list<array{entry_id:int, sequence_no:int, entry_date:string, finalized_at:string}>}> $vaults
+     * @param  list<array{vault_id:string, unread_count:int, entries:list<array{entry_id:int, sequence_no:int, entry_date:string, finalized_at:string}>}>  $vaults
      */
     public function __construct(
         public readonly array $vaults,
         public readonly int $totalUnread,
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {
@@ -29,4 +28,3 @@ class WeeklyUnreadDigestMail extends Mailable
             ->view('emails.vault.weekly-unread-digest');
     }
 }
-

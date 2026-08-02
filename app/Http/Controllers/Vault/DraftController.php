@@ -6,9 +6,9 @@ namespace EvilStudio\Cryptosik\Http\Controllers\Vault;
 
 use Closure;
 use EvilStudio\Cryptosik\Enums\VaultStatus;
+use EvilStudio\Cryptosik\Exceptions\CryptoOperationException;
+use EvilStudio\Cryptosik\Exceptions\CryptosikException;
 use EvilStudio\Cryptosik\Http\Controllers\Controller;
-use EvilStudio\Cryptosik\Models\User;
-use EvilStudio\Cryptosik\Models\Vault;
 use EvilStudio\Cryptosik\Services\Audit\AuditLogService;
 use EvilStudio\Cryptosik\Services\Vault\EntryService;
 use EvilStudio\Cryptosik\Services\Vault\UnreadEntryService;
@@ -17,7 +17,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
-use RuntimeException;
 
 class DraftController extends Controller
 {
@@ -25,15 +24,14 @@ class DraftController extends Controller
         private readonly EntryService $entryService,
         private readonly AuditLogService $auditLogService,
         private readonly UnreadEntryService $unreadEntryService,
-    ) {
-    }
+    ) {}
 
     public function save(Request $request): RedirectResponse
     {
         $validated = $this->validateCompose($request);
 
-        $user = $this->resolveUser($request);
-        $vault = $this->resolveVault($request);
+        $user = $this->currentUser($request);
+        $vault = $this->currentVault($request);
         $dataKey = (string) $request->session()->get(SessionKeys::UNLOCKED_VAULT_KEY, '');
 
         if ($user === null || $vault === null || $dataKey === '') {
@@ -60,8 +58,8 @@ class DraftController extends Controller
 
     public function delete(Request $request): RedirectResponse
     {
-        $user = $this->resolveUser($request);
-        $vault = $this->resolveVault($request);
+        $user = $this->currentUser($request);
+        $vault = $this->currentVault($request);
 
         if ($user === null || $vault === null) {
             return redirect()->route('auth.vault.unlock.show');
@@ -80,8 +78,8 @@ class DraftController extends Controller
     {
         $validated = $this->validateCompose($request);
 
-        $user = $this->resolveUser($request);
-        $vault = $this->resolveVault($request);
+        $user = $this->currentUser($request);
+        $vault = $this->currentVault($request);
         $dataKey = (string) $request->session()->get(SessionKeys::UNLOCKED_VAULT_KEY, '');
 
         if ($user === null || $vault === null || $dataKey === '') {
@@ -105,7 +103,9 @@ class DraftController extends Controller
             $entry = $this->entryService->finalizeDraft($user, $vault);
             $this->auditLogService->vaultEntryAdded($user, $entry);
             $this->unreadEntryService->markAsRead($user->id, $entry->id);
-        } catch (RuntimeException $exception) {
+        } catch (CryptoOperationException) {
+            return $this->redirectToComposer()->withErrors(['draft' => __('messages.vault.errors.crypto_failure')]);
+        } catch (CryptosikException $exception) {
             return $this->redirectToComposer()->withErrors(['draft' => $exception->getMessage()]);
         }
 
@@ -125,8 +125,8 @@ class DraftController extends Controller
             'content' => ['nullable', 'string', sprintf('max:%d', $contentMaxChars)],
         ]);
 
-        $user = $this->resolveUser($request);
-        $vault = $this->resolveVault($request);
+        $user = $this->currentUser($request);
+        $vault = $this->currentVault($request);
         $dataKey = (string) $request->session()->get(SessionKeys::UNLOCKED_VAULT_KEY, '');
 
         if ($user === null || $vault === null || $dataKey === '') {
@@ -159,7 +159,7 @@ class DraftController extends Controller
                 'file',
                 sprintf('max:%d', $maxFileSizeKb),
                 static function (string $attribute, mixed $value, Closure $fail) use ($allowedExtensions, $allowedMimeTypes): void {
-                    if (!$value instanceof UploadedFile) {
+                    if (! $value instanceof UploadedFile) {
                         $fail(__('messages.vault.errors.attachment_type_not_allowed'));
 
                         return;
@@ -168,7 +168,8 @@ class DraftController extends Controller
                     $extension = mb_strtolower((string) $value->getClientOriginalExtension());
                     $mimeType = mb_strtolower((string) ($value->getMimeType() ?? ''));
 
-                    if (!in_array($extension, $allowedExtensions, true) && !in_array($mimeType, $allowedMimeTypes, true)) {
+                    // Both must match: either one alone lets content or filename be spoofed.
+                    if (! in_array($extension, $allowedExtensions, true) || ! in_array($mimeType, $allowedMimeTypes, true)) {
                         $fail(__('messages.vault.errors.attachment_type_not_allowed'));
                     }
                 },
@@ -184,7 +185,9 @@ class DraftController extends Controller
         try {
             $this->entryService->addDraftAttachment($user, $vault, $dataKey, $attachmentValidator->validated()['attachment']);
             $this->auditLogService->vaultFileUploaded($user, $vault);
-        } catch (RuntimeException $exception) {
+        } catch (CryptoOperationException) {
+            return $this->redirectToComposer()->withErrors(['attachment' => __('messages.vault.errors.crypto_failure')]);
+        } catch (CryptosikException $exception) {
             return $this->redirectToComposer()->withErrors(['attachment' => $exception->getMessage()]);
         }
 
@@ -193,8 +196,8 @@ class DraftController extends Controller
 
     public function deleteAttachment(Request $request, int $attachment): RedirectResponse
     {
-        $user = $this->resolveUser($request);
-        $vault = $this->resolveVault($request);
+        $user = $this->currentUser($request);
+        $vault = $this->currentVault($request);
 
         if ($user === null || $vault === null) {
             return redirect()->route('auth.vault.unlock.show');
@@ -206,7 +209,7 @@ class DraftController extends Controller
 
         $deleted = $this->entryService->removeDraftAttachment($user, $vault, $attachment);
 
-        if (!$deleted) {
+        if (! $deleted) {
             return $this->redirectToComposer()->withErrors(['attachment' => __('messages.vault.errors.attachment_not_found')]);
         }
 
@@ -227,19 +230,5 @@ class DraftController extends Controller
     private function redirectToComposer(): RedirectResponse
     {
         return redirect()->route('vault.workspace', ['mode' => 'new']);
-    }
-
-    private function resolveUser(Request $request): ?User
-    {
-        $id = $request->session()->get(SessionKeys::USER_ID);
-
-        return is_numeric($id) ? User::query()->find((int) $id) : null;
-    }
-
-    private function resolveVault(Request $request): ?Vault
-    {
-        $vaultId = $request->session()->get(SessionKeys::UNLOCKED_VAULT_ID);
-
-        return is_string($vaultId) ? Vault::query()->find($vaultId) : null;
     }
 }

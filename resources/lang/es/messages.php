@@ -34,6 +34,7 @@ return [
             'otp' => 'OTP (6 dígitos)',
             'verify_continue' => 'Entrar A La Bóveda',
             'change_email' => 'Usar Otro Email',
+            'change_language' => 'Cambiar idioma',
             'dev_mode_code' => 'OTP en modo dev: :code',
             'status' => [
                 'code_issued' => 'Si la cuenta existe, se ha emitido un código de acceso.',
@@ -42,6 +43,8 @@ return [
                 'restart_login' => 'Reinicia el login introduciendo de nuevo tu email.',
                 'invalid_code' => 'Codigo de acceso invalido o expirado.',
                 'delivery_failed' => 'No se pudo enviar el codigo de acceso. Intentalo de nuevo en un momento.',
+                'too_many_requests' => 'Demasiadas solicitudes de código. Inténtalo de nuevo en :seconds segundos.',
+                'too_many_attempts' => 'Demasiados intentos de verificación. Inténtalo de nuevo en :seconds segundos.',
             ],
         ],
         'vault_unlock' => [
@@ -51,6 +54,7 @@ return [
             'unlock' => 'Desbloquear bóveda',
             'errors' => [
                 'invalid_key' => 'Clave de la bóveda inválida o sin acceso a esta bóveda.',
+                'too_many_attempts' => 'Demasiados intentos de desbloqueo. Inténtalo de nuevo en :seconds segundos.',
             ],
         ],
     ],
@@ -118,6 +122,10 @@ return [
         'errors' => [
             'readonly' => 'Esta bóveda es de solo lectura.',
             'attachment_type_not_allowed' => 'Tipo de adjunto no compatible. Formatos permitidos: txt, md, pdf, odt, ods, odp, doc, docx, xls, xlsx, png, jpg, jpeg, webp.',
+            'duplicate_vault_key' => 'Esta clave de bóveda ya está en uso. Elige otra.',
+            'attachment_limit_reached' => 'Se alcanzó el límite de adjuntos para este borrador.',
+            'draft_not_found' => 'No hay ningún borrador para finalizar.',
+            'crypto_failure' => 'No se pudieron procesar los datos cifrados. Desbloquea la caja fuerte de nuevo e inténtalo otra vez.',
             'attachment_not_found' => 'No se encontró el adjunto en tu borrador.',
             'owner_only_description' => 'Solo el owner de la bóveda puede actualizar la descripcion.',
             'title_required' => 'El título de la bóveda es obligatorio.',
@@ -135,6 +143,9 @@ return [
             'login' => 'Login',
             'password' => 'Contraseña',
             'sign_in' => 'Iniciar sesión',
+            'errors' => [
+                'too_many_attempts' => 'Demasiados intentos de inicio de sesión. Inténtalo de nuevo en :seconds segundos.',
+            ],
         ],
         'dashboard' => [
             'users' => 'Usuarios',
@@ -172,6 +183,7 @@ return [
             'owner' => 'Owner',
             'select_owner' => 'Seleccionar owner',
             'vault_key' => 'Clave de la bóveda',
+            'show_vault_key' => 'Mostrar',
             'name' => 'Nombre',
             'description_optional' => 'Descripción (opcional)',
             'description_markdown' => 'Descripción (Markdown, opcional)',

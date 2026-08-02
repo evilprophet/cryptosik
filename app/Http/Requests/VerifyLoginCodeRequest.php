@@ -16,7 +16,7 @@ class VerifyLoginCodeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email:rfc'],
+            'email' => ['required', 'email:rfc', 'max:255'],
             'code' => ['required', 'digits:6'],
         ];
     }

@@ -46,7 +46,7 @@ class WeeklyUnreadDigestCommandTest extends TestCase
         $unlockResult = $vaultAccessService->unlockVaultForUser($owner, 'weekly-digest-vault-key');
         $this->assertNotNull($unlockResult);
 
-        $dataKey = (string) ($unlockResult['data_key'] ?? '');
+        $dataKey = $unlockResult->dataKey;
         $this->assertNotSame('', $dataKey);
 
         $entryService->upsertDraft(
@@ -71,6 +71,61 @@ class WeeklyUnreadDigestCommandTest extends TestCase
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'system.user.weekly_unread_digest.sent',
             'target_type' => 'user',
+            'target_id' => (string) $member->id,
+        ]);
+    }
+
+    public function test_weekly_digest_respects_the_notifications_enabled_preference(): void
+    {
+        Mail::fake();
+
+        $owner = $this->createUser('owner@example.com', 'Owner');
+        $member = $this->createUser('member@example.com', 'Member');
+
+        $member->notifications_enabled = false;
+        $member->save();
+
+        $vaultAccessService = app(VaultAccessService::class);
+        $entryService = app(EntryService::class);
+        $unreadEntryService = app(UnreadEntryService::class);
+
+        $vault = $vaultAccessService->createVault(
+            owner: $owner,
+            vaultKey: 'notifications-off-vault-key',
+            name: 'Digest Vault',
+            description: null,
+        );
+
+        VaultMember::query()->create([
+            'vault_id' => $vault->id,
+            'user_id' => $member->id,
+            'role' => VaultMemberRole::Member,
+        ]);
+
+        $unlockResult = $vaultAccessService->unlockVaultForUser($owner, 'notifications-off-vault-key');
+        $this->assertNotNull($unlockResult);
+
+        $entryService->upsertDraft(
+            user: $owner,
+            vault: $vault,
+            dataKey: $unlockResult->dataKey,
+            entryDate: now()->toDateString(),
+            title: 'Digest entry',
+            content: 'Digest content',
+        );
+
+        $entry = $entryService->finalizeDraft($owner, $vault);
+        $unreadEntryService->markAsRead($owner->id, $entry->id);
+
+        // The member has an unread entry and would receive a digest, but opted out.
+        $this->artisan('cryptosik:notifications:weekly-unread', ['--per-vault' => 5])
+            ->expectsOutput('Weekly digest summary: sent=0 skipped=1 failed=0')
+            ->assertSuccessful();
+
+        Mail::assertNothingSent();
+
+        $this->assertDatabaseMissing('audit_logs', [
+            'action' => 'system.user.weekly_unread_digest.sent',
             'target_id' => (string) $member->id,
         ]);
     }

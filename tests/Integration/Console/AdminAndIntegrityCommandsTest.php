@@ -8,14 +8,18 @@ use EvilStudio\Cryptosik\Enums\ChainVerificationResult;
 use EvilStudio\Cryptosik\Enums\VaultStatus;
 use EvilStudio\Cryptosik\Models\Admin;
 use EvilStudio\Cryptosik\Models\AuditLog;
+use EvilStudio\Cryptosik\Models\ChainVerificationRun;
 use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
+use EvilStudio\Cryptosik\Services\Integrity\IntegrityVerificationService;
 use EvilStudio\Cryptosik\Services\Vault\EntryService;
 use EvilStudio\Cryptosik\Services\Vault\VaultAccessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Tests\TestCase;
 
@@ -236,6 +240,68 @@ class AdminAndIntegrityCommandsTest extends TestCase
         ]);
     }
 
+    public function test_prune_audit_logs_command_deletes_a_backlog_larger_than_one_chunk(): void
+    {
+        config(['cryptosik.audit_logs.retention_days' => '30']);
+
+        $stale = Carbon::now()->subDays(45);
+        $rows = [];
+
+        // One row past the 1000-row chunk size, so the loop has to run more than once.
+        for ($i = 0; $i < 1001; $i++) {
+            $rows[] = [
+                'actor_type' => 'system',
+                'actor_id' => 0,
+                'action' => 'bulk.audit.event',
+                'target_type' => 'system',
+                'target_id' => null,
+                'metadata_json' => null,
+                'created_at' => $stale,
+            ];
+        }
+
+        AuditLog::query()->insert($rows);
+
+        AuditLog::query()->create([
+            'actor_type' => 'system',
+            'actor_id' => 0,
+            'action' => 'kept.audit.event',
+            'target_type' => 'system',
+            'target_id' => null,
+            'metadata_json' => null,
+            'created_at' => Carbon::now()->subDays(2),
+        ]);
+
+        $deleteStatements = [];
+
+        DB::listen(function ($query) use (&$deleteStatements): void {
+            $sql = strtolower(ltrim($query->sql));
+
+            if (str_starts_with($sql, 'delete')) {
+                $deleteStatements[] = $sql;
+            }
+        });
+
+        $this->artisan('cryptosik:audit-logs-prune')
+            ->expectsOutput('Audit log pruning completed: 1001 deleted.')
+            ->assertSuccessful();
+
+        $this->assertSame(0, AuditLog::query()->where('action', 'bulk.audit.event')->count());
+        $this->assertSame(1, AuditLog::query()->where('action', 'kept.audit.event')->count());
+
+        // An unbounded DELETE removes exactly the same rows, so counting them proves nothing -
+        // what matters is that every statement is bounded, keeping each write lock short.
+        $this->assertNotSame([], $deleteStatements);
+
+        foreach ($deleteStatements as $sql) {
+            $this->assertStringContainsString(
+                'limit',
+                $sql,
+                'Every prune statement must be bounded: '.$sql,
+            );
+        }
+    }
+
     public function test_prune_audit_logs_command_skips_never_and_rejects_invalid_retention(): void
     {
         config(['cryptosik.audit_logs.retention_days' => 'never']);
@@ -258,11 +324,87 @@ class AdminAndIntegrityCommandsTest extends TestCase
             'action' => 'kept.audit.event',
         ]);
 
+        // A non-numeric value is still a hard error - there is nothing sensible to narrow to.
         $this->artisan('cryptosik:audit-logs-prune', [
-            '--retention' => '45',
+            '--retention' => 'forever',
         ])
             ->expectsOutput('Invalid audit log retention. Allowed values: never, 30, 60, 90, 120.')
             ->assertExitCode(Command::FAILURE);
+    }
+
+    public function test_verify_chains_command_reports_an_unknown_vault_id(): void
+    {
+        $this->createVaultWithEntry('unknown-id-probe-key-001');
+
+        $this->artisan('cryptosik:verify-chains', [
+            '--vault' => '00000000-0000-0000-0000-000000000000',
+        ])
+            ->expectsOutput('Vault 00000000-0000-0000-0000-000000000000 not found.')
+            ->assertExitCode(Command::FAILURE);
+    }
+
+    public function test_verify_chains_command_records_a_crashed_verification_instead_of_leaving_it_pending(): void
+    {
+        $fixture = $this->createVaultWithEntry('crash-probe-key-001');
+        $vault = $fixture['vault'];
+
+        $this->mock(
+            IntegrityVerificationService::class,
+            static fn ($mock) => $mock->shouldReceive('verifyVault')->andThrow(new RuntimeException('boom')),
+        );
+
+        $this->artisan('cryptosik:verify-chains', ['--vault' => $vault->id])
+            ->assertSuccessful();
+
+        $run = ChainVerificationRun::query()->where('vault_id', $vault->id)->latest('id')->first();
+
+        $this->assertNotNull($run);
+        $this->assertSame(
+            ChainVerificationResult::Failed,
+            $run?->result,
+            'A crashed run must not stay Pending - the admin panel would show it as still running.',
+        );
+        $this->assertNotNull($run?->finished_at);
+        $this->assertStringContainsString('Verification crashed', (string) ($run?->details_json['error'] ?? ''));
+
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'integrity.chain.failed',
+            'target_id' => (string) $vault->id,
+        ]);
+    }
+
+    public function test_prune_audit_logs_command_narrows_a_retention_outside_the_whitelist(): void
+    {
+        AuditLog::query()->create([
+            'actor_type' => 'system',
+            'actor_id' => 0,
+            'action' => 'inside.retention.event',
+            'target_type' => 'system',
+            'target_id' => null,
+            'metadata_json' => null,
+            'created_at' => Carbon::now()->subDays(40),
+        ]);
+
+        AuditLog::query()->create([
+            'actor_type' => 'system',
+            'actor_id' => 0,
+            'action' => 'outside.retention.event',
+            'target_type' => 'system',
+            'target_id' => null,
+            'metadata_json' => null,
+            'created_at' => Carbon::now()->subDays(80),
+        ]);
+
+        // 45 sits exactly between 30 and 60, and a tie must resolve to the longer retention so
+        // narrowing never deletes more than asked. The 40-day entry surviving proves it.
+        $this->artisan('cryptosik:audit-logs-prune', [
+            '--retention' => '45',
+        ])
+            ->expectsOutput('Retention 45 is not one of 30, 60, 90, 120; using 60 instead.')
+            ->expectsOutput('Audit log pruning completed: 1 deleted.')
+            ->assertSuccessful();
+
+        $this->assertSame(['inside.retention.event'], AuditLog::query()->pluck('action')->all());
     }
 
     /**
@@ -291,7 +433,7 @@ class AdminAndIntegrityCommandsTest extends TestCase
 
         $this->assertNotNull($unlockResult);
 
-        $dataKey = (string) ($unlockResult['data_key'] ?? '');
+        $dataKey = $unlockResult->dataKey;
         $this->assertNotSame('', $dataKey);
 
         $entryService->upsertDraft(

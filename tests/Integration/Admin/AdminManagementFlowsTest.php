@@ -459,6 +459,43 @@ class AdminManagementFlowsTest extends TestCase
         $this->assertNull($restored?->deleted_at);
     }
 
+    public function test_restoring_a_previously_archived_vault_keeps_it_archived(): void
+    {
+        $admin = $this->createAdmin();
+        $owner = $this->createUser('archive-owner@example.com', 'Owner', true);
+
+        $vault = app(VaultAccessService::class)->createVault(
+            owner: $owner,
+            vaultKey: 'archived-then-deleted-key-001',
+            name: 'Archived vault',
+            description: null,
+        );
+
+        $this->withSession($this->adminSession($admin))
+            ->from(route('admin.vaults.index'))
+            ->post(route('admin.vaults.archive', ['vault' => $vault->id]))
+            ->assertRedirect(route('admin.vaults.index'));
+
+        $this->withSession($this->adminSession($admin))
+            ->from(route('admin.vaults.index'))
+            ->post(route('admin.vaults.soft-delete', ['vault' => $vault->id]))
+            ->assertRedirect(route('admin.vaults.index'));
+
+        $this->withSession($this->adminSession($admin))
+            ->from(route('admin.vaults.index'))
+            ->post(route('admin.vaults.restore', ['vaultId' => $vault->id]))
+            ->assertRedirect(route('admin.vaults.index'));
+
+        $restored = Vault::withTrashed()->find($vault->id);
+
+        $this->assertNull($restored?->deleted_at);
+        $this->assertSame(
+            VaultStatus::Archived,
+            $restored?->status,
+            'Restoring must not silently un-archive a vault that was archived before deletion.',
+        );
+    }
+
     public function test_admin_logs_resolve_actor_labels_and_support_filters(): void
     {
         $admin = $this->createAdmin();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use EvilStudio\Cryptosik\Http\Middleware\EnsureAdminAuthenticated;
 use EvilStudio\Cryptosik\Http\Middleware\EnsureUserOtpAuthenticated;
 use EvilStudio\Cryptosik\Http\Middleware\EnsureVaultUnlocked;
+use EvilStudio\Cryptosik\Http\Middleware\SecurityHeaders;
 use EvilStudio\Cryptosik\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             SetLocale::class,
+            SecurityHeaders::class,
         ]);
 
         $middleware->alias([
@@ -39,5 +41,4 @@ return Application::configure(basePath: dirname(__DIR__))
             'cryptosik.admin' => EnsureAdminAuthenticated::class,
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-    })->create();
+    ->withExceptions(function (Exceptions $exceptions): void {})->create();

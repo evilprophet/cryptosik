@@ -34,6 +34,7 @@ return [
             'otp' => 'OTP (6 cyfr)',
             'verify_continue' => 'Wejdź do sejfu',
             'change_email' => 'To nie ten email',
+            'change_language' => 'Zmień język',
             'dev_mode_code' => 'Kod OTP w trybie dev: :code',
             'status' => [
                 'code_issued' => 'Jeśli konto istnieje, kod logowania został wygenerowany.',
@@ -42,6 +43,8 @@ return [
                 'restart_login' => 'Rozpocznij logowanie ponownie, podając email.',
                 'invalid_code' => 'Nieprawidłowy lub wygasły kod logowania.',
                 'delivery_failed' => 'Nie udało się wysłać kodu logowania. Spróbuj ponownie za chwilę.',
+                'too_many_requests' => 'Zbyt wiele żądań kodu. Spróbuj ponownie za :seconds s.',
+                'too_many_attempts' => 'Zbyt wiele prób weryfikacji. Spróbuj ponownie za :seconds s.',
             ],
         ],
         'vault_unlock' => [
@@ -51,6 +54,7 @@ return [
             'unlock' => 'Odblokuj sejf',
             'errors' => [
                 'invalid_key' => 'Nieprawidłowy klucz sejfu lub brak dostępu do sejfu.',
+                'too_many_attempts' => 'Zbyt wiele prób otwarcia sejfu. Spróbuj ponownie za :seconds s.',
             ],
         ],
     ],
@@ -118,6 +122,10 @@ return [
         'errors' => [
             'readonly' => 'Ten sejf jest tylko do odczytu.',
             'attachment_type_not_allowed' => 'Nieobsługiwany typ załącznika. Dozwolone formaty: txt, md, pdf, odt, ods, odp, doc, docx, xls, xlsx, png, jpg, jpeg, webp.',
+            'duplicate_vault_key' => 'Ten klucz sejfu jest już używany. Wybierz inny.',
+            'attachment_limit_reached' => 'Osiągnięto limit załączników dla tego szkicu.',
+            'draft_not_found' => 'Nie ma szkicu do sfinalizowania.',
+            'crypto_failure' => 'Nie udało się przetworzyć zaszyfrowanych danych. Odblokuj sejf ponownie i spróbuj jeszcze raz.',
             'attachment_not_found' => 'Nie znaleziono załącznika w Twoim szkicu.',
             'owner_only_description' => 'Tylko właściciel sejfu może zmienić opis.',
             'title_required' => 'Tytuł sejfu jest wymagany.',
@@ -142,6 +150,9 @@ return [
             'login' => 'Login',
             'password' => 'Hasło',
             'sign_in' => 'Zaloguj',
+            'errors' => [
+                'too_many_attempts' => 'Zbyt wiele prób logowania. Spróbuj ponownie za :seconds s.',
+            ],
         ],
         'dashboard' => [
             'title' => 'Dashboard',
@@ -187,6 +198,7 @@ return [
             'owner' => 'Właściciel',
             'select_owner' => 'Wybierz właściciela',
             'vault_key' => 'Klucz sejfu',
+            'show_vault_key' => 'Pokaż',
             'name' => 'Nazwa',
             'description_optional' => 'Opis (opcjonalnie)',
             'description_markdown' => 'Opis (Markdown, opcjonalnie)',

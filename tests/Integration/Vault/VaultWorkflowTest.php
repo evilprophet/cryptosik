@@ -11,12 +11,13 @@ use EvilStudio\Cryptosik\Models\Entry;
 use EvilStudio\Cryptosik\Models\EntryRead;
 use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Models\Vault;
-use EvilStudio\Cryptosik\Models\VaultMember;
 use EvilStudio\Cryptosik\Models\VaultChainState;
+use EvilStudio\Cryptosik\Models\VaultMember;
 use EvilStudio\Cryptosik\Services\Vault\VaultAccessService;
 use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -56,7 +57,7 @@ class VaultWorkflowTest extends TestCase
             throw new RuntimeException('Unable to prepare unlocked vault test fixture.');
         }
 
-        $this->dataKey = $unlockResult['data_key'];
+        $this->dataKey = $unlockResult->dataKey;
     }
 
     public function test_user_can_unlock_vault_with_valid_key(): void
@@ -71,6 +72,28 @@ class VaultWorkflowTest extends TestCase
             ]);
 
         $response->assertRedirect(route('vault.workspace'));
+        $response->assertSessionHas(SessionKeys::UNLOCKED_VAULT_ID, $this->vault->id);
+        $response->assertSessionHas(SessionKeys::UNLOCKED_VAULT_KEY);
+    }
+
+    /**
+     * Unlock rotates the session id before storing the decrypted data key. The rotation is not
+     * observable under the array session driver, so this pins the part that would actually
+     * break: regenerating must keep the caller logged in, which invalidate() would not.
+     */
+    public function test_unlock_keeps_the_authenticated_user_in_the_session(): void
+    {
+        $response = $this
+            ->withSession([
+                SessionKeys::USER_ID => $this->user->id,
+                SessionKeys::USER_EMAIL => $this->user->email,
+                SessionKeys::USER_NICKNAME => $this->user->nickname,
+            ])
+            ->post('/vault/unlock', ['vault_key' => $this->vaultKey]);
+
+        $response->assertRedirect(route('vault.workspace'));
+        $response->assertSessionHas(SessionKeys::USER_ID, $this->user->id);
+        $response->assertSessionHas(SessionKeys::USER_EMAIL, $this->user->email);
         $response->assertSessionHas(SessionKeys::UNLOCKED_VAULT_ID, $this->vault->id);
         $response->assertSessionHas(SessionKeys::UNLOCKED_VAULT_KEY);
     }
@@ -207,7 +230,7 @@ class VaultWorkflowTest extends TestCase
                 SessionKeys::USER_EMAIL => $member->email,
                 SessionKeys::USER_NICKNAME => $member->nickname,
                 SessionKeys::UNLOCKED_VAULT_ID => $this->vault->id,
-                SessionKeys::UNLOCKED_VAULT_KEY => $unlockResult['data_key'],
+                SessionKeys::UNLOCKED_VAULT_KEY => $unlockResult->dataKey,
             ])
             ->get('/vault?mode=entry&entry='.$entry?->id)
             ->assertOk();
@@ -220,24 +243,44 @@ class VaultWorkflowTest extends TestCase
         $this->assertSame(2, EntryRead::query()->where('entry_id', $entry?->id)->count());
     }
 
-    public function test_archived_vault_is_read_only_for_new_drafts(): void
+    public function test_archiving_closes_an_already_unlocked_vault(): void
     {
         $this->vault->status = VaultStatus::Archived;
         $this->vault->save();
 
-        $response = $this
+        $this->withSession($this->unlockedSession())
+            ->get('/vault')
+            ->assertRedirect(route('auth.vault.unlock.show'));
+
+        $writeResponse = $this
             ->withSession($this->unlockedSession())
-            ->from('/vault?mode=new')
             ->post('/vault/draft/save', [
                 'entry_date' => self::ENTRY_DATE,
                 'title' => 'Nie powinno sie zapisac',
                 'content' => 'Vault archived',
             ]);
 
-        $response->assertRedirect('/vault?mode=new');
-        $response->assertSessionHasErrors('title');
+        $writeResponse->assertRedirect(route('auth.vault.unlock.show'));
 
         $this->assertDatabaseCount('entry_drafts', 0);
+    }
+
+    public function test_archived_vault_cannot_be_unlocked_again(): void
+    {
+        $this->vault->status = VaultStatus::Archived;
+        $this->vault->save();
+
+        $response = $this
+            ->withSession([
+                SessionKeys::USER_ID => $this->user->id,
+                SessionKeys::USER_EMAIL => $this->user->email,
+            ])
+            ->from('/vault/unlock')
+            ->post('/vault/unlock', ['vault_key' => $this->vaultKey]);
+
+        $response->assertRedirect('/vault/unlock');
+        $response->assertSessionHasErrors('vault_key');
+        $response->assertSessionMissing(SessionKeys::UNLOCKED_VAULT_KEY);
     }
 
     public function test_attachment_upload_validation_error_keeps_compose_input(): void
@@ -258,6 +301,70 @@ class VaultWorkflowTest extends TestCase
         $response->assertSessionHasInput('content', "Linia 1\nLinia 2");
 
         $this->assertDatabaseCount('entry_drafts', 1);
+    }
+
+    public function test_attachment_with_an_allowed_extension_but_a_disallowed_content_type_is_rejected(): void
+    {
+        // An allowed extension used to be enough on its own, so any payload could be smuggled
+        // in under a .png name. createWithContent() cannot express this - the fake derives the
+        // mime type from the file name - so the detected type is supplied explicitly.
+        $response = $this
+            ->withSession($this->unlockedSession())
+            ->from('/vault?mode=new')
+            ->post('/vault/draft/attachments', [
+                'attachment' => UploadedFile::fake()->create('looks-harmless.png', 1, 'text/html'),
+            ]);
+
+        $response->assertSessionHasErrors('attachment');
+        $this->assertDatabaseCount('draft_attachments', 0);
+    }
+
+    public function test_attachment_with_an_allowed_content_type_but_a_disallowed_extension_is_rejected(): void
+    {
+        $response = $this
+            ->withSession($this->unlockedSession())
+            ->from('/vault?mode=new')
+            ->post('/vault/draft/attachments', [
+                'attachment' => UploadedFile::fake()->create('payload.php', 1, 'text/plain'),
+            ]);
+
+        $response->assertSessionHasErrors('attachment');
+        $this->assertDatabaseCount('draft_attachments', 0);
+    }
+
+    public function test_attachment_matching_both_the_extension_and_the_content_type_is_accepted(): void
+    {
+        $response = $this
+            ->withSession($this->unlockedSession())
+            ->from('/vault?mode=new')
+            ->post('/vault/draft/attachments', [
+                'attachment' => UploadedFile::fake()->createWithContent('notes.txt', 'plain text body'),
+            ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('draft_attachments', 1);
+    }
+
+    public function test_deeply_nested_markdown_renders_without_exhausting_the_parser(): void
+    {
+        $deeplyNested = str_repeat('> ', 500).'zagnieżdżona treść';
+
+        $this->withSession($this->unlockedSession())
+            ->post('/vault/draft/finalize', [
+                'entry_date' => self::ENTRY_DATE,
+                'title' => 'Gleboko zagniezdzony',
+                'content' => $deeplyNested,
+            ])->assertStatus(302);
+
+        $entry = Entry::query()->where('vault_id', $this->vault->id)->latest('id')->first();
+
+        $this->assertNotNull($entry);
+
+        $response = $this->withSession($this->unlockedSession())
+            ->get('/vault?mode=entry&entry='.$entry?->id);
+
+        $response->assertOk();
+        $response->assertSee('zagnieżdżona treść', false);
     }
 
     public function test_vault_owner_can_update_description_from_overview(): void
@@ -310,7 +417,7 @@ class VaultWorkflowTest extends TestCase
                 SessionKeys::USER_EMAIL => $member->email,
                 SessionKeys::USER_NICKNAME => $member->nickname,
                 SessionKeys::UNLOCKED_VAULT_ID => $this->vault->id,
-                SessionKeys::UNLOCKED_VAULT_KEY => $unlockResult['data_key'],
+                SessionKeys::UNLOCKED_VAULT_KEY => $unlockResult->dataKey,
             ])
             ->from('/vault')
             ->post('/vault/description', [
@@ -356,6 +463,84 @@ class VaultWorkflowTest extends TestCase
         $this->assertNull($auditLog?->target_id);
     }
 
+    public function test_unlock_throttles_repeated_invalid_key_attempts(): void
+    {
+        config([
+            'cryptosik.throttle.vault_unlock.max_attempts' => 2,
+            'cryptosik.throttle.vault_unlock.decay_minutes' => 15,
+        ]);
+
+        $session = [
+            SessionKeys::USER_ID => $this->user->id,
+            SessionKeys::USER_EMAIL => $this->user->email,
+            SessionKeys::USER_NICKNAME => $this->user->nickname,
+        ];
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this
+                ->withSession($session)
+                ->from('/vault/unlock')
+                ->post('/vault/unlock', ['vault_key' => 'invalid-vault-key'], ['REMOTE_ADDR' => '127.0.0.1'])
+                ->assertSessionHasErrors('vault_key');
+        }
+
+        $failedAuditLogs = AuditLog::query()->where('action', 'vault.open.failed')->count();
+
+        $throttled = $this
+            ->withSession($session)
+            ->from('/vault/unlock')
+            ->post('/vault/unlock', ['vault_key' => $this->vaultKey], ['REMOTE_ADDR' => '127.0.0.1']);
+
+        $throttled->assertRedirect('/vault/unlock');
+        $throttled->assertSessionHasErrors('vault_key');
+        $throttled->assertSessionMissing(SessionKeys::UNLOCKED_VAULT_ID);
+
+        $this->assertSame(
+            $failedAuditLogs,
+            AuditLog::query()->where('action', 'vault.open.failed')->count(),
+            'Throttled requests must not reach the unlock attempt.',
+        );
+    }
+
+    public function test_successful_unlock_clears_the_throttle_counter(): void
+    {
+        config([
+            'cryptosik.throttle.vault_unlock.max_attempts' => 2,
+            'cryptosik.throttle.vault_unlock.decay_minutes' => 15,
+        ]);
+
+        $session = [
+            SessionKeys::USER_ID => $this->user->id,
+            SessionKeys::USER_EMAIL => $this->user->email,
+            SessionKeys::USER_NICKNAME => $this->user->nickname,
+        ];
+
+        $this
+            ->withSession($session)
+            ->from('/vault/unlock')
+            ->post('/vault/unlock', ['vault_key' => 'invalid-vault-key'], ['REMOTE_ADDR' => '127.0.0.1'])
+            ->assertSessionHasErrors('vault_key');
+
+        $this
+            ->withSession($session)
+            ->post('/vault/unlock', ['vault_key' => $this->vaultKey], ['REMOTE_ADDR' => '127.0.0.1'])
+            ->assertRedirect(route('vault.workspace'));
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this
+                ->withSession($session)
+                ->from('/vault/unlock')
+                ->post('/vault/unlock', ['vault_key' => 'invalid-vault-key'], ['REMOTE_ADDR' => '127.0.0.1'])
+                ->assertSessionHasErrors('vault_key');
+        }
+
+        $this->assertSame(
+            3,
+            AuditLog::query()->where('action', 'vault.open.failed')->count(),
+            'Without the reset the third attempt would be throttled and never reach the unlock.',
+        );
+    }
+
     public function test_lock_vault_clears_unlocked_session_and_creates_audit_log(): void
     {
         $response = $this
@@ -380,15 +565,15 @@ class VaultWorkflowTest extends TestCase
         $this->vault->status = VaultStatus::Archived;
         $this->vault->save();
 
-        $response = $this
-            ->withSession($this->unlockedSession())
+        $this->withSession($this->unlockedSession())
             ->from('/vault')
             ->post('/vault/description', [
                 'description' => 'Attempted archived update',
-            ]);
+            ])
+            ->assertRedirect(route('auth.vault.unlock.show'));
 
-        $response->assertRedirect('/vault');
-        $response->assertSessionHasErrors('description');
+        $this->vault->status = VaultStatus::Active;
+        $this->vault->save();
 
         $overviewResponse = $this
             ->withSession($this->unlockedSession())
@@ -398,6 +583,7 @@ class VaultWorkflowTest extends TestCase
         $overviewResponse->assertSee('Main family vault');
         $overviewResponse->assertDontSee('Attempted archived update');
     }
+
     private function unlockedSession(): array
     {
         return [

@@ -1,5 +1,7 @@
 .git
 .gitignore
+.github
+.gitlab-ci.yml
 node_modules
 vendor
 storage/logs
@@ -9,3 +11,8 @@ storage/framework/views/*
 storage/framework/testing/*
 .env
 data
+tests
+docs
+phpunit.xml
+README.md
+AGENTS.md

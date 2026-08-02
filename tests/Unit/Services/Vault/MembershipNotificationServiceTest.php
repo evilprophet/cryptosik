@@ -113,4 +113,3 @@ class MembershipNotificationServiceTest extends TestCase
         ]);
     }
 }
-

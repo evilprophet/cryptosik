@@ -9,7 +9,14 @@ Artisan::command('inspire', function () {
     $this->comment('Cryptosik scheduler is active.');
 })->purpose('Display scheduler health status.');
 
-Schedule::command('cryptosik:verify-chains')->cron('0 */3 * * *');
+$verifyEveryHours = (int) config('cryptosik.integrity.verify_every_hours', 3);
+
+// A step outside 1-23 would build an expression that never fires.
+if ($verifyEveryHours < 1 || $verifyEveryHours > 23) {
+    $verifyEveryHours = 3;
+}
+
+Schedule::command('cryptosik:verify-chains')->cron(sprintf('0 */%d * * *', $verifyEveryHours));
 Schedule::command('cryptosik:otp-prune')->hourly();
 Schedule::command('cryptosik:notifications:weekly-unread')->cron((string) config('cryptosik.notifications.weekly_unread_cron', '0 9 * * 6'));
 Schedule::command('cryptosik:audit-logs-prune')->cron((string) config('cryptosik.audit_logs.prune_cron', '15 3 * * *'));

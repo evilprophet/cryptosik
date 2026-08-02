@@ -62,8 +62,9 @@ class UnreadEntryService
             ->whereDoesntHave('reads', static function ($query) use ($user): void {
                 $query->where('user_id', $user->id);
             })
+            // Active only: an archived vault cannot be unlocked, so its entries are unreachable.
             ->whereHas('vault', static function ($query): void {
-                $query->whereIn('status', [VaultStatus::Active, VaultStatus::Archived])
+                $query->where('status', VaultStatus::Active)
                     ->whereNull('deleted_at');
             })
             ->orderByDesc('entries.finalized_at')

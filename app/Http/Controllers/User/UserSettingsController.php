@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace EvilStudio\Cryptosik\Http\Controllers\User;
 
 use EvilStudio\Cryptosik\Http\Controllers\Controller;
-use EvilStudio\Cryptosik\Models\User;
 use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,13 +23,7 @@ class UserSettingsController extends Controller
             'notifications_enabled' => ['nullable', 'boolean'],
         ]);
 
-        $userId = $request->session()->get(SessionKeys::USER_ID);
-
-        if (!is_numeric($userId)) {
-            return redirect()->route('auth.user.login.show');
-        }
-
-        $user = User::query()->find((int) $userId);
+        $user = $this->currentUser($request);
 
         if ($user === null) {
             return redirect()->route('auth.user.login.show');

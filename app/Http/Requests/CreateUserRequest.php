@@ -19,7 +19,7 @@ class CreateUserRequest extends FormRequest
         $nicknameLimit = (int) config('cryptosik.limits.user_nickname_chars', 80);
 
         return [
-            'email' => ['required', 'email:rfc', Rule::unique('users', 'email')],
+            'email' => ['required', 'email:rfc', 'max:255', Rule::unique('users', 'email')],
             'nickname' => ['required', 'string', 'max:'.$nicknameLimit],
             'is_active' => ['nullable', 'boolean'],
             'notifications_enabled' => ['nullable', 'boolean'],

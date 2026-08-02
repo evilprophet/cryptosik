@@ -15,8 +15,7 @@ class VaultMemberAddedMail extends Mailable
 
     public function __construct(
         public readonly string $vaultId,
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {
@@ -25,4 +24,3 @@ class VaultMemberAddedMail extends Mailable
             ->view('emails.vault.member-added');
     }
 }
-

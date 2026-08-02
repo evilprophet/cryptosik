@@ -54,12 +54,10 @@ class ExportVaultCommand extends Command
             'name_enc' => $vault->name_enc,
             'description_enc' => $vault->description_enc,
             'vault_crypto' => [
-                'vault_locator' => $vault->crypto?->vault_locator,
                 'kdf_salt' => $vault->crypto?->kdf_salt,
                 'kdf_params' => $vault->crypto?->kdf_params,
                 'wrapped_data_key' => $vault->crypto?->wrapped_data_key,
                 'wrap_nonce' => $vault->crypto?->wrap_nonce,
-                'key_fingerprint' => $vault->crypto?->key_fingerprint,
             ],
             'members' => $vault->members->map(fn ($member): array => [
                 'user_id' => $member->user_id,

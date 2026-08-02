@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use EvilStudio\Cryptosik\Http\Controllers\Admin\AdminAuthController;
 use EvilStudio\Cryptosik\Http\Controllers\Admin\AdminAuditLogController;
+use EvilStudio\Cryptosik\Http\Controllers\Admin\AdminAuthController;
 use EvilStudio\Cryptosik\Http\Controllers\Admin\AdminDashboardController;
 use EvilStudio\Cryptosik\Http\Controllers\Admin\AdminUserController;
 use EvilStudio\Cryptosik\Http\Controllers\Admin\AdminVaultController;
@@ -12,6 +12,7 @@ use EvilStudio\Cryptosik\Http\Controllers\LocaleController;
 use EvilStudio\Cryptosik\Http\Controllers\User\UserSettingsController;
 use EvilStudio\Cryptosik\Http\Controllers\Vault\DraftController;
 use EvilStudio\Cryptosik\Http\Controllers\Vault\VaultController;
+use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 $adminPath = (string) config('cryptosik.admin.path', 'admin');
 
 Route::get('/', static function (Request $request): RedirectResponse {
-    if ($request->session()->has(\EvilStudio\Cryptosik\Support\SessionKeys::USER_ID)) {
+    if ($request->session()->has(SessionKeys::USER_ID)) {
         return redirect()->route('vault.workspace');
     }
 

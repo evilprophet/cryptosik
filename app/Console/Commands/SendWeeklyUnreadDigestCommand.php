@@ -34,4 +34,3 @@ class SendWeeklyUnreadDigestCommand extends Command
         return self::SUCCESS;
     }
 }
-

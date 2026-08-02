@@ -23,7 +23,9 @@ class OtpService
 
         if (RateLimiter::tooManyAttempts($rateLimitKey, $requestLimit)) {
             throw ValidationException::withMessages([
-                'email' => 'Too many code requests. Try again later.',
+                'email' => __('messages.auth.user_login.errors.too_many_requests', [
+                    'seconds' => RateLimiter::availableIn($rateLimitKey),
+                ]),
             ]);
         }
 
@@ -43,7 +45,7 @@ class OtpService
             'ip_address' => $ipAddress,
         ]);
 
-        if (!$this->isDevOtpMode()) {
+        if (! $this->isDevOtpMode()) {
             try {
                 Mail::to($email)->send(new LoginOtpCodeMail($code, $ttlMinutes));
             } catch (Throwable $exception) {
@@ -59,10 +61,25 @@ class OtpService
         return $this->isDevOtpMode() ? $code : null;
     }
 
-    public function verify(string $email, string $inputCode, string $_ipAddress): bool
+    public function verify(string $email, string $inputCode, string $ipAddress): bool
     {
+        $normalizedEmail = mb_strtolower($email);
+        $rateLimitKey = sprintf('otp:verify:%s:%s', $normalizedEmail, $ipAddress);
+        $verifyLimit = (int) config('cryptosik.throttle.otp_verify.max_attempts');
+        $windowMinutes = (int) config('cryptosik.throttle.otp_verify.decay_minutes');
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, $verifyLimit)) {
+            throw ValidationException::withMessages([
+                'code' => __('messages.auth.user_login.errors.too_many_attempts', [
+                    'seconds' => RateLimiter::availableIn($rateLimitKey),
+                ]),
+            ]);
+        }
+
+        RateLimiter::hit($rateLimitKey, $windowMinutes * 60);
+
         $record = AuthLoginCode::query()
-            ->where('email', mb_strtolower($email))
+            ->where('email', $normalizedEmail)
             ->latest('id')
             ->first();
 
@@ -80,14 +97,8 @@ class OtpService
             return false;
         }
 
-        if (!Hash::check($inputCode, $record->code_hash)) {
-            $record->attempts += 1;
-
-            if ($record->attempts >= (int) config('cryptosik.otp.max_attempts')) {
-                $record->blocked_until = $now->addMinutes((int) config('cryptosik.otp.lock_minutes'));
-            }
-
-            $record->save();
+        if (! Hash::check($inputCode, $record->code_hash)) {
+            $this->registerFailedAttempt($record, $now);
 
             return false;
         }
@@ -95,7 +106,24 @@ class OtpService
         $record->consumed_at = $now;
         $record->save();
 
+        RateLimiter::clear($rateLimitKey);
+
         return true;
+    }
+
+    private function registerFailedAttempt(AuthLoginCode $record, CarbonImmutable $now): void
+    {
+        AuthLoginCode::query()->whereKey($record->getKey())->increment('attempts');
+
+        $attempts = (int) AuthLoginCode::query()->whereKey($record->getKey())->value('attempts');
+
+        if ($attempts >= (int) config('cryptosik.otp.max_attempts')) {
+            AuthLoginCode::query()->whereKey($record->getKey())->update([
+                'blocked_until' => $now->addMinutes((int) config('cryptosik.otp.lock_minutes')),
+            ]);
+        }
+
+        $record->refresh();
     }
 
     private function buildCode(): string
@@ -109,6 +137,10 @@ class OtpService
 
     private function isDevOtpMode(): bool
     {
+        if (mb_strtolower((string) config('app.env', 'production')) === 'production') {
+            return false;
+        }
+
         return mb_strtolower((string) config('app.mode', 'prod')) === 'dev';
     }
 }

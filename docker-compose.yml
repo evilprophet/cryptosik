@@ -19,6 +19,8 @@ services:
       - ./data:/var/www/html/data
     working_dir: /var/www/html
     command: php artisan schedule:work --no-interaction
+    healthcheck:
+      disable: true
     depends_on:
       - app
     restart: unless-stopped

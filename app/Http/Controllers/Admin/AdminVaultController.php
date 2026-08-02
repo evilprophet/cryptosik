@@ -9,7 +9,6 @@ use EvilStudio\Cryptosik\Enums\VaultStatus;
 use EvilStudio\Cryptosik\Http\Controllers\Controller;
 use EvilStudio\Cryptosik\Http\Requests\AssignVaultMemberRequest;
 use EvilStudio\Cryptosik\Http\Requests\CreateVaultRequest;
-use EvilStudio\Cryptosik\Models\Admin;
 use EvilStudio\Cryptosik\Models\Entry;
 use EvilStudio\Cryptosik\Models\EntryRead;
 use EvilStudio\Cryptosik\Models\User;
@@ -18,7 +17,6 @@ use EvilStudio\Cryptosik\Models\VaultMember;
 use EvilStudio\Cryptosik\Services\Audit\AuditLogService;
 use EvilStudio\Cryptosik\Services\Vault\MembershipNotificationService;
 use EvilStudio\Cryptosik\Services\Vault\VaultAccessService;
-use EvilStudio\Cryptosik\Support\SessionKeys;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,8 +31,7 @@ class AdminVaultController extends Controller
         private readonly VaultAccessService $vaultAccessService,
         private readonly AuditLogService $auditLogService,
         private readonly MembershipNotificationService $membershipNotificationService,
-    ) {
-    }
+    ) {}
 
     public function index(): View
     {
@@ -58,11 +55,11 @@ class AdminVaultController extends Controller
     public function store(CreateVaultRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        $sendOwnerNotificationNow = !array_key_exists('send_owner_notification_now', $validated) || (bool) $validated['send_owner_notification_now'];
+        $sendOwnerNotificationNow = ! array_key_exists('send_owner_notification_now', $validated) || (bool) $validated['send_owner_notification_now'];
 
         $owner = User::query()->find((int) $validated['owner_user_id']);
 
-        if ($owner === null || !$owner->is_active) {
+        if ($owner === null || ! $owner->is_active) {
             return back()->withErrors(['owner_user_id' => __('messages.admin.vaults.errors.owner_must_be_active')]);
         }
 
@@ -77,7 +74,7 @@ class AdminVaultController extends Controller
             return back()->withErrors(['vault_key' => $exception->getMessage()]);
         }
 
-        $admin = $this->resolveAdmin($request->session()->get(SessionKeys::ADMIN_ID));
+        $admin = $this->currentAdmin($request);
 
         if ($admin !== null) {
             $this->auditLogService->adminVaultCreated($admin, $vault);
@@ -105,9 +102,8 @@ class AdminVaultController extends Controller
     public function assignMember(AssignVaultMemberRequest $request, Vault $vault): RedirectResponse
     {
         $validated = $request->validated();
-        $adminId = $request->session()->get(SessionKeys::ADMIN_ID);
         $userId = (int) $validated['user_id'];
-        $sendNotificationNow = !array_key_exists('send_notification_now', $validated) || (bool) $validated['send_notification_now'];
+        $sendNotificationNow = ! array_key_exists('send_notification_now', $validated) || (bool) $validated['send_notification_now'];
 
         if ($vault->status === VaultStatus::SoftDeleted) {
             return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.soft_deleted_membership')]);
@@ -115,7 +111,7 @@ class AdminVaultController extends Controller
 
         $user = User::query()->find($userId);
 
-        if ($user === null || !$user->is_active) {
+        if ($user === null || ! $user->is_active) {
             return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.member_must_be_active')]);
         }
 
@@ -132,10 +128,10 @@ class AdminVaultController extends Controller
             'vault_id' => $vault->id,
             'user_id' => $userId,
             'role' => VaultMemberRole::Member,
-            'added_by_admin_id' => is_numeric($adminId) ? (int) $adminId : null,
+            'added_by_admin_id' => $this->currentAdmin($request)?->id,
         ]);
 
-        $admin = $this->resolveAdmin($adminId);
+        $admin = $this->currentAdmin($request);
 
         if ($admin !== null) {
             $this->auditLogService->adminVaultMemberAssigned($admin, $vault, $user);
@@ -168,7 +164,7 @@ class AdminVaultController extends Controller
             return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.soft_deleted_membership')]);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.member_must_be_active')]);
         }
 
@@ -177,11 +173,11 @@ class AdminVaultController extends Controller
             ->where('user_id', $user->id)
             ->exists();
 
-        if (!$membershipExists) {
+        if (! $membershipExists) {
             return back()->withErrors(['user_id' => __('messages.admin.vaults.errors.member_not_found')]);
         }
 
-        $admin = $this->resolveAdmin($request->session()->get(SessionKeys::ADMIN_ID));
+        $admin = $this->currentAdmin($request);
 
         if ($admin === null) {
             return redirect()->route('admin.login.show');
@@ -227,19 +223,12 @@ class AdminVaultController extends Controller
         }
 
         $vault->restore();
-        $vault->status = VaultStatus::Active;
+
+        // softDelete() overwrites status, so archived_at is the only surviving record of it.
+        $vault->status = $vault->archived_at !== null ? VaultStatus::Archived : VaultStatus::Active;
         $vault->save();
 
         return back()->with('status', __('messages.admin.vaults.status.restored'));
-    }
-
-    private function resolveAdmin(mixed $adminId): ?Admin
-    {
-        if (!is_numeric($adminId)) {
-            return null;
-        }
-
-        return Admin::query()->find((int) $adminId);
     }
 
     private function attachUnreadEntryCounts(LengthAwarePaginator $vaults): void

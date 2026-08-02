@@ -41,7 +41,6 @@
     @if ($hasViteHot || $hasViteManifest)
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
-    @livewireStyles
 </head>
 <body @class(['min-h-screen', 'app-bg-admin' => $isAdmin])>
 <div class="mx-auto w-full px-3 py-4 lg:w-2/3 lg:px-4 lg:py-6">
@@ -225,8 +224,8 @@
 
 @if ($showSettingsControls)
     <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-base-100/80 p-4 backdrop-blur-sm" aria-hidden="true">
-        <div class="w-full max-w-md rounded-2xl border border-base-300 bg-base-200 p-5 shadow-xl">
-            <h3 class="mb-4 text-lg font-semibold text-base-content">{{ __('messages.user.settings.title') }}</h3>
+        <div class="w-full max-w-md rounded-2xl border border-base-300 bg-base-200 p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+            <h3 id="settings-modal-title" class="mb-4 text-lg font-semibold text-base-content">{{ __('messages.user.settings.title') }}</h3>
 
             <form method="post" action="{{ $showUserControls ? route('user.settings.update') : route('locale.update') }}" class="space-y-4">
                 @csrf
@@ -275,17 +274,47 @@
 
             const closeButtons = modal.querySelectorAll('[data-close-settings-modal]');
 
+            const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+            let lastFocused = null;
+
             const openModal = () => {
+                lastFocused = document.activeElement;
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
                 modal.setAttribute('aria-hidden', 'false');
+                modal.querySelector(focusableSelector)?.focus();
             };
 
             const closeModal = () => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
                 modal.setAttribute('aria-hidden', 'true');
+                lastFocused?.focus();
             };
+
+            // Tab must not escape an open dialog.
+            modal.addEventListener('keydown', (event) => {
+                if (event.key !== 'Tab') {
+                    return;
+                }
+
+                const focusable = [...modal.querySelectorAll(focusableSelector)];
+
+                if (focusable.length === 0) {
+                    return;
+                }
+
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            });
 
             openButtons.forEach((button) => button.addEventListener('click', openModal));
             closeButtons.forEach((button) => button.addEventListener('click', closeModal));
@@ -344,6 +373,28 @@
 </script>
 
 <script>
+    // Finalizing an entry is append-only, so a double click must not produce two of them.
+    document.addEventListener('submit', (event) => {
+        event.target.querySelectorAll?.('button[type="submit"]').forEach((button) => {
+            button.disabled = true;
+            setTimeout(() => {
+                button.disabled = false;
+            }, 10000);
+        });
+    });
+
+    document.querySelectorAll('[data-toggle-vault-key]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const input = button.parentElement?.querySelector('[data-vault-key-input]');
+
+            if (input) {
+                input.type = input.type === 'password' ? 'text' : 'password';
+            }
+        });
+    });
+</script>
+
+<script>
     (() => {
         document.querySelectorAll('[data-dismiss-flash]').forEach((button) => {
             button.addEventListener('click', () => {
@@ -357,31 +408,96 @@
 <script>
     (() => {
         const emojiStyle = 'google';
-        const emojiBaseUrl = 'https://cdn.jsdelivr.net/npm/emoji-datasource-google/img/google/64/';
         const emojiMartPickerModuleUrl = '/vendor/emoji-mart/module.js';
         const emojiMartDataUrl = '/vendor/emoji-mart/data/google.json';
         const emojiSpriteSheetUrl = '/vendor/emoji-mart/sheets/google-64.png';
+        // Twemoji finds the emoji; the glyph comes from the local spritesheet via CSS, so the
+        // <img> gets a transparent pixel and never issues a request. A falsy callback makes
+        // twemoji skip replacement, which leaves the native glyph for anything not in the sheet.
+        const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 
         let picker = null;
         let pickerTargetEditor = null;
         let pickerTrigger = null;
         let pickerLoadPromise = null;
         let pickerInitialized = false;
+        let emojiSprite = null;
+        let emojiSpritePromise = null;
+
+        const normalizeCodePoints = (value) => String(value)
+            .toLowerCase()
+            .split('-')
+            .filter((part) => part !== 'fe0f')
+            .join('-');
+
+        const loadEmojiSprite = () => {
+            if (emojiSpritePromise !== null) {
+                return emojiSpritePromise;
+            }
+
+            emojiSpritePromise = fetch(emojiMartDataUrl)
+                .then((response) => response.json())
+                .then((data) => {
+                    const index = new Map();
+
+                    Object.values(data?.emojis ?? {}).forEach((emoji) => {
+                        (emoji?.skins ?? []).forEach((skin) => {
+                            if (typeof skin?.unified === 'string') {
+                                index.set(normalizeCodePoints(skin.unified), { x: skin.x, y: skin.y });
+                            }
+                        });
+                    });
+
+                    emojiSprite = {
+                        index,
+                        cols: data?.sheet?.cols ?? 61,
+                        rows: data?.sheet?.rows ?? 61,
+                    };
+
+                    return emojiSprite;
+                })
+                .catch(() => {
+                    emojiSprite = { index: new Map(), cols: 61, rows: 61 };
+
+                    return emojiSprite;
+                });
+
+            return emojiSpritePromise;
+        };
+
+        const renderEmojiGlyphs = (container) => {
+            const { index, cols, rows } = emojiSprite;
+
+            window.twemoji.parse(container, {
+                className: 'emoji-glyph',
+                callback: (icon) => (index.has(normalizeCodePoints(icon)) ? transparentPixel : false),
+                attributes: (rawText, iconId) => {
+                    const cell = index.get(normalizeCodePoints(iconId));
+
+                    if (!cell) {
+                        return {};
+                    }
+
+                    const x = (cell.x / (cols - 1)) * 100;
+                    const y = (cell.y / (rows - 1)) * 100;
+
+                    return { style: `background-position: ${x}% ${y}%;` };
+                },
+            });
+        };
 
         const applyEmoji = (container) => {
             if (!container || typeof window.twemoji === 'undefined') {
                 return;
             }
 
-            window.twemoji.parse(container, {
-                className: 'emoji-glyph',
-                callback: (icon) => `${emojiBaseUrl}${icon}.png`,
-                attributes: () => ({
-                    draggable: 'false',
-                    loading: 'lazy',
-                    decoding: 'async',
-                }),
-            });
+            if (emojiSprite === null) {
+                loadEmojiSprite().then(() => renderEmojiGlyphs(container));
+
+                return;
+            }
+
+            renderEmojiGlyphs(container);
         };
 
         const closePicker = () => {
@@ -586,6 +702,5 @@
     <script src="{{ asset('vendor/simplemde/simplemde.min.js') }}" defer></script>
 @endif
 
-@livewireScripts
 </body>
 </html>

@@ -7,7 +7,7 @@ This document is the source of truth for the Cryptosik technology stack.
 - PHP `8.3+`
 - Laravel `13`
 - Runtime mode selected by `APP_MODE` (`dev` or `prod`)
-- Production image base: `php:8.3-apache`
+- Production image base: `php:8.4-apache`
 
 ## 🧱 Core Backend Stack
 
@@ -19,7 +19,6 @@ This document is the source of truth for the Cryptosik technology stack.
 ## 🌐 Frontend Stack
 
 - Blade templates (SSR)
-- Livewire `4.2` (package installed for interactive UI integration)
 - Tailwind CSS `4`
 - DaisyUI `5` (custom `default-dark` theme)
 - Vite `8` + `laravel-vite-plugin`
@@ -43,13 +42,13 @@ Notification-related columns:
 
 Persistence in container runtime:
 - `./data` mounted to `/var/www/html/data`
-- `storage`, `database`, and `bootstrap/cache` are symlinked to `data/*`
+- `storage` is symlinked to `data/storage`; the SQLite file is redirected to `data/database` through `DB_DATABASE`
 
 ## 🔐 Cryptography and Integrity
 
 - Payload encryption: `XChaCha20-Poly1305` (libsodium AEAD)
 - KDF for vault wrapping key: `Argon2id` (`sodium_crypto_pwhash`)
-- Vault lookup and fingerprint: HKDF + HMAC-SHA256 with app secrets
+- Vault resolution on unlock: trial unwrap against the vaults the user belongs to, so no fast-hash lookup value is stored
 - Append-only chain integrity: SHA-256 hash chain (`prev_hash`, `entry_hash`)
 - Attachment integrity contribution: deterministic attachment hash digest
 
@@ -92,8 +91,9 @@ Container scheduler:
 - `docker-compose.yml` defines separate `app` and `scheduler` services
 - Entrypoint responsibilities:
   - prepare persistent directories,
-  - create symlinks,
-  - run migrations for the web container.
+  - create the `storage` symlink,
+  - run migrations and warm the config, route and view caches for the web container,
+  - hand `./data` over to `www-data` once everything root created is in place.
 
 ## ✅ Development and Quality Tooling
 
@@ -107,4 +107,4 @@ Container scheduler:
 
 - Tests use Laravel `testing` environment with SQLite
 - Integration tests cover auth, vault workflow, admin flows, notifications, console commands, and localization
-- Unit tests cover audit service, locator derivation, hash generation, unread logic, and chain verification
+- Unit tests cover audit service, crypto envelope handling, OTP lifecycle, vault access, hash generation, unread logic, and chain verification
