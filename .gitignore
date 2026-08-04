@@ -54,6 +54,6 @@ Thumbs.db
 
 # Local tooling
 /.codex
-/ai-rules/
+/ai-*/
 Homestead.json
 Homestead.yaml
