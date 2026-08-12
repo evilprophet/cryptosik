@@ -2,7 +2,7 @@
 
 ## Overview
 This ERD reflects the current Laravel implementation for Cryptosik.
-It focuses on append-only entries, encrypted payload storage, per-user unread tracking, vault key lookup, and admin-managed access.
+It focuses on append-only entries, encrypted payload storage, per-user unread tracking, trial-unwrap vault resolution, and admin-managed access.
 
 ## Mermaid
 ```mermaid
@@ -12,6 +12,7 @@ erDiagram
     users ||--o{ entry_drafts : creates
     users ||--o{ entries : finalizes
     users ||--o{ entry_reads : reads
+    users ||..o{ sessions : has_sessions
 
     admins ||--o{ vault_members : assigns
     admins ||--o{ chain_verification_runs : initiates
@@ -45,6 +46,15 @@ erDiagram
         boolean is_active
         timestamp created_at
         timestamp updated_at
+    }
+
+    sessions {
+        string id PK
+        bigint user_id IDX
+        string ip_address
+        text user_agent
+        longtext payload
+        int last_activity IDX
     }
 
     auth_login_codes {
@@ -195,10 +205,32 @@ erDiagram
 - `entries (vault_id, sequence_no)` is unique.
 - `entries (vault_id, entry_hash)` is unique.
 - `entry_reads (entry_id, user_id)` is unique.
+- `users.email` and `admins.login` are unique.
+- `vaults` uses soft deletes (`deleted_at`), so vault rows are never removed by the application flow.
 - Unlock resolves a vault by trying to unwrap `wrapped_data_key` for each vault the user belongs to; no derived index of the vault key is stored.
+
+## Referential Actions
+- `vaults.owner_user_id`, `vault_members.user_id`, `entry_drafts.user_id`, `entries.created_by` - `RESTRICT ON DELETE`, so a user referenced by vault data cannot be deleted (deactivation is the intended path).
+- Everything owned by a vault (`vault_members`, `vault_crypto`, `entry_drafts`, `entries`, `vault_chain_states`, `chain_verification_runs`) - `CASCADE ON DELETE`.
+- `draft_attachments.draft_id`, `entry_attachments.entry_id`, `entry_reads.entry_id`, `entry_reads.user_id` - `CASCADE ON DELETE`.
+- `vault_members.added_by_admin_id` and `chain_verification_runs.initiated_by_admin_id` - `SET NULL ON DELETE`, so removing an admin keeps the historical record.
+- `audit_logs.actor_id` and `sessions.user_id` carry no foreign key; they store loose actor references so log and session rows survive independently.
+
+## Secondary Indexes
+- `users`: `is_active`, `notifications_enabled`.
+- `admins`: `is_active`.
+- `auth_login_codes`: `email`, `expires_at`, `blocked_until`, `ip_address`.
+- `vaults`: `status`, `(owner_user_id, status)`.
+- `vault_members`: `user_id`, `membership_notified_at`.
+- `entries`: `(vault_id, finalized_at)`.
+- `entry_reads`: `entry_id`, `(user_id, read_at)`.
+- `chain_verification_runs`: `(vault_id, result)`.
+- `audit_logs`: `(action, created_at)`, `(actor_type, actor_id)`, `created_at`.
+- `sessions`: `user_id`, `last_activity`.
 
 ## Security Notes
 - Encrypted text fields store ciphertext+nonce as JSON envelopes.
 - Binary file payloads (`blob_enc`) are encrypted and stored as base64 text.
 - Final entry history is integrity-protected by `prev_hash` and `entry_hash`.
 - Notification and digest audit metadata stores only non-sensitive operational values.
+- `sessions` is Laravel's session table and is only used when `SESSION_DRIVER=database`; the default file driver keeps sessions in `storage/framework/sessions`. Either way the payload holds the decrypted data key of an unlocked vault and is encrypted with `APP_KEY`.

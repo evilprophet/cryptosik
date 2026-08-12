@@ -7,7 +7,7 @@ It is built as a Laravel monolith with a browser UI for users and admins.
 
 The main goal is to keep vault history immutable while allowing secure draft editing before finalization.
 
-For stack details, see [docs/tech-stack.md](docs/tech-stack.md).
+For stack details, see [Tech Stack](./docs/tech-stack.md).
 
 ## ✨ Key Features
 
@@ -231,20 +231,20 @@ That writes a single self-contained `data/backup.sqlite` with the WAL already fo
 
 ## 🧪 Testing & Quality
 
-Latest local verification (2026-08-02):
+Latest local verification (2026-08-11):
 - `php artisan test`
 - Result: `151 passed` (`805 assertions`)
 
 CI:
-- `.gitlab-ci.yml` runs unit and integration tests.
+- `.gitlab-ci.yml` includes the reusable `php-quality` component, which runs `vendor/bin/pint --test` for linting plus the `Unit` and `Integration` PHPUnit suites.
 - `.github/workflows/build-docker-image.yml` provides manual GHCR build/publish.
 
 ## 📚 Documentation
 
-- `docs/tech-stack.md`
-- `docs/user-stories.md`
-- `docs/erd.md`
-- `docs/endpoint-map.md`
+- 🧰 **[Tech Stack](./docs/tech-stack.md)** - Runtime, crypto, scheduling, containerization and tooling reference
+- 📖 **[User Stories](./docs/user-stories.md)** - Functional scope with acceptance criteria per epic
+- 🗄️ **[ERD](./docs/erd.md)** - Database schema, relations, constraints and security notes
+- 🔗 **[Endpoint Map](./docs/endpoint-map.md)** - Web routes, console commands and scheduler definitions
 
 ## 🧭 Notes
 

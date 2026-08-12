@@ -99,8 +99,8 @@ Container scheduler:
 
 - Composer scripts (`setup`, `dev`, `test`)
 - PHPUnit `12.5` (`php artisan test`)
-- Laravel Pint `1.x` available in dev dependencies
-- GitLab CI (`.gitlab-ci.yml`) executes unit and integration tests
+- Laravel Pint `1.x` for code style (`vendor/bin/pint --test` in CI)
+- GitLab CI (`.gitlab-ci.yml`) includes the shared `php-quality` component (`devops/ci-cd-components/php-quality`); the project only supplies inputs: SQLite system packages, the `zip`/`pdo_sqlite` extensions, the Pint lint command, and the `Unit` and `Integration` PHPUnit commands
 - GitHub workflow (`build-docker-image.yml`) manually builds and pushes GHCR image
 
 ## 🧪 Test Environment
