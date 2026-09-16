@@ -1,5 +1,5 @@
 include:
-  - component: $CI_SERVER_FQDN/devops/ci-cd-components/php-quality@v1.8.0
+  - component: $CI_SERVER_FQDN/devops/ci-cd-components/php-quality@v1.10.0
     inputs:
       extra_system_packages: "sqlite3 libsqlite3-dev"
       php_extensions: "zip pdo_sqlite"
